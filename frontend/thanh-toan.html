@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh Toán Premium - SmartFoodAI</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-deep: #e8f5ec;
+            --primary: #22c55e;
+            --primary-light: #4ade80;
+            --gradient-main: linear-gradient(135deg, #22c55e, #10b981, #14b8a6);
+            --text-main: #1f2937;
+            --text-secondary: #4b5563;
+            --text-muted: #9ca3af;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(34, 197, 94, 0.2);
+            --momo-color: #111;
+            --momo-gradient: linear-gradient(135deg, #222, #444);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: var(--primary);
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.15;
+            top: -10%;
+            left: -10%;
+            animation: float 10s infinite alternate;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--momo-color);
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.1;
+            bottom: -10%;
+            right: -10%;
+            animation: float 12s infinite alternate-reverse;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .payment-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            animation: slideUp 0.6s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .logo i {
+            background: var(--gradient-main);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .package-card {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(16, 185, 129, 0.02));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .package-card::before {
+            content: 'PRO';
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--gradient-main);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .package-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+        }
+
+        .package-price {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .package-price span {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .feature-list li i {
+            color: var(--primary);
+        }
+
+        .payment-method {
+            margin-bottom: 30px;
+        }
+
+        .method-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .momo-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 16px;
+            border: 2px solid var(--momo-color);
+            border-radius: 12px;
+            background: rgba(165, 0, 100, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .momo-box:hover {
+            background: rgba(165, 0, 100, 0.1);
+        }
+
+        .momo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--momo-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .momo-text {
+            flex-grow: 1;
+        }
+
+        .momo-text h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .momo-text p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .momo-check {
+            color: var(--momo-color);
+            font-size: 20px;
+        }
+
+        .btn-pay {
+            width: 100%;
+            padding: 16px;
+            background: var(--momo-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(165, 0, 100, 0.3);
+        }
+
+        .btn-pay:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(165, 0, 100, 0.4);
+        }
+
+        .btn-pay:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-main);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="payment-container">
+        <div class="glass-card">
+            <div class="header">
+                <div class="logo">
+                    <i class="fa-solid fa-leaf"></i> SmartFoodAI
+                </div>
+                <h1 class="title">Nâng cấp Premium</h1>
+                <p class="subtitle">Mở khóa toàn bộ tính năng không giới hạn</p>
+            </div>
+
+            <div class="package-card">
+                <div class="package-name">Gói Premium Vĩnh Viễn</div>
+                <div class="package-price">2.000 <span>VNĐ</span></div>
+                <ul class="feature-list">
+                    <li><i class="fa-solid fa-check-circle"></i> Nhận diện món ăn không giới hạn</li>
+                    <li><i class="fa-solid fa-check-circle"></i> Tư vấn dinh dưỡng chuyên sâu</li>
+                    <li><i class="fa-solid fa-check-circle"></i> Lên thực đơn cá nhân hoá AI</li>
+                    <li><i class="fa-solid fa-check-circle"></i> Không chứa quảng cáo</li>
+                </ul>
+            </div>
+
+            <div class="payment-method">
+                <span class="method-label">Phương thức thanh toán</span>
+                <div class="momo-box">
+                    <div class="momo-icon">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div class="momo-text">
+                        <h4>PayOS</h4>
+                        <p>Thanh toán siêu tốc, an toàn qua VietQR</p>
+                    </div>
+                    <div class="momo-check">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-pay" class="btn-pay">
+                <i class="fa-solid fa-credit-card"></i> Thanh toán bằng PayOS
+            </button>
+            
+            <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Quay lại trang chủ</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnPay = document.getElementById('btn-pay');
+            
+            btnPay.addEventListener('click', async () => {
+                // Kiểm tra đăng nhập
+                const userRaw = localStorage.getItem('smartfood_user');
+                if (!userRaw) {
+                    alert('Bạn cần đăng nhập để thực hiện thanh toán!');
+                    window.location.href = '/#intro';
+                    return;
+                }
+                
+                const user = JSON.parse(userRaw);
+                
+                if (user.account_type === 'premium') {
+                    alert('Tài khoản của bạn đã là Premium!');
+                    window.location.href = '/';
+                    return;
+                }
+
+                // UI feedback
+                btnPay.disabled = true;
+                btnPay.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo giao dịch...';
+
+                try {
+                    const response = await fetch('/api/payment/payos/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ user_id: user.id })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.checkoutUrl) {
+                        // Chuyển hướng sang trang PayOS
+                        window.location.href = data.checkoutUrl;
+                    } else {
+                        alert(data.message || 'Lỗi tạo giao dịch thanh toán.');
+                        btnPay.disabled = false;
+                        btnPay.innerHTML = '<i class="fa-solid fa-credit-card"></i> Thanh toán bằng PayOS';
+                    }
+                } catch (error) {
+                    console.error('Lỗi thanh toán:', error);
+                    alert('Lỗi kết nối máy chủ. Vui lòng thử lại sau.');
+                    btnPay.disabled = false;
+                    btnPay.innerHTML = '<i class="fa-solid fa-credit-card"></i> Thanh toán bằng PayOS';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

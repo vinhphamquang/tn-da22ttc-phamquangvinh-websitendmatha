@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e8f5ec">
+    <style>
+        html {
+            background-color: #e8f5ec;
+        }
+
+        body {
+            background-color: #e8f5ec;
+        }
+
+        .app-page-veil {
+            position: fixed;
+            inset: 0;
+            z-index: 99998;
+            background-color: #e8f5ec;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        html.app-navigating .app-page-veil,
+        html.app-leaving .app-page-veil {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .app-page-veil.veil-fading-out {
+            transition: opacity 0.34s ease;
+        }
+    </style>
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem('app:nav')) {
+                    document.documentElement.classList.add('app-navigating');
+                }
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+    <title>Admin Dashboard - Smart Food Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css?v=5">
+    <link rel="stylesheet" href="/static/admin_append.css?v=9">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+    <!-- Cross-page veil: opaque overlay matching page bg, fades out when ready -->
+    <div id="app-page-veil" class="app-page-veil" aria-hidden="true"></div>
+
+    <!-- Animated Background Blobs -->
+    <div class="bg-blobs" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- ========== HEADER / NAVBAR ========== -->
+    <header class="navbar scrolled" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <i class="fa-solid fa-bowl-food"></i>
+                <span>SmartFood<strong>AI</strong></span>
+            </a>
+            <nav class="nav-links" id="nav-links">
+                <a href="/" class="nav-link">
+                    <i class="fa-solid fa-house"></i> Trang Chủ
+                </a>
+                <a href="/#analyze" class="nav-link">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i> Phân Tích
+                </a>
+                <a href="/nutrition" class="nav-link" id="nav-nutrition-link" style="display: none;">
+                    <i class="fa-solid fa-heart-pulse"></i> Kế Hoạch Dinh Dưỡng
+                </a>
+                <a href="/admin" class="nav-link active">
+                    <i class="fa-solid fa-shield-halved"></i> Admin
+                </a>
+                <div class="nav-auth" id="user-section">
+                    <!-- Notification Bell -->
+                    <div class="notif-bell-wrap" id="notif-bell-wrap">
+                        <button class="notif-bell-btn" id="notif-bell-btn" title="Thông báo">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="notif-badge" id="notif-badge" style="display: none;">0</span>
+                        </button>
+                        <div class="notif-dropdown hidden" id="notif-dropdown">
+                            <div class="notif-dropdown-header">
+                                <span><i class="fa-solid fa-bell"></i> Thông Báo</span>
+                                <button class="notif-read-all" id="notif-read-all" title="Đánh dấu tất cả đã đọc">
+                                    <i class="fa-solid fa-check-double"></i>
+                                </button>
+                            </div>
+                            <div class="notif-dropdown-body" id="notif-dropdown-body">
+                                <div class="notif-empty"><i class="fa-solid fa-bell-slash"></i>
+                                    <p>Chưa có thông báo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="/#profile" class="nav-link" id="nav-user-name" style="cursor: pointer;">
+                        <i class="fa-solid fa-user"></i> <span id="display-username">Admin</span>
+                    </a>
+                    <button id="btn-admin-logout" class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;">
+                        <i class="fa-solid fa-right-from-bracket"></i> Đăng Xuất
+                    </button>
+                </div>
+            </nav>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ========== PAGE: ADMIN ========== -->
+    <section class="page active" id="page-admin" style="margin-top: 80px;">
+        <div class="admin-wrapper">
+            <div class="admin-hero reveal">
+                <div class="admin-hero-content">
+                    <div class="admin-hero-badge"><i class="fa-solid fa-shield-halved"></i> Bảng Quản Trị</div>
+                    <h2 class="admin-hero-title">Xin chào, <span class="gradient-text">Admin</span> 👋</h2>
+                    <p class="admin-hero-desc">Quản lý toàn bộ dữ liệu hệ thống nhận diện món ăn từ bảng điều khiển này.
+                    </p>
+                </div>
+            </div>
+
+            <div class="admin-tabs">
+                <button class="admin-tab active" data-tab="admin-stats">
+                    <i class="fa-solid fa-chart-pie"></i><span>Tổng Quan</span>
+                </button>
+                <button class="admin-tab" data-tab="admin-foods">
+                    <i class="fa-solid fa-utensils"></i><span>Món Ăn</span>
+                </button>
+                <button class="admin-tab" data-tab="admin-users">
+                    <i class="fa-solid fa-user-group"></i><span>Người Dùng</span>
+                </button>
+                <button class="admin-tab" data-tab="admin-history">
+                    <i class="fa-solid fa-timeline"></i><span>Lịch Sử</span>
+                </button>
+                <button class="admin-tab" data-tab="admin-comments">
+                    <i class="fa-solid fa-comments"></i><span>Phản Hồi</span>
+                </button>
+                <button class="admin-tab" data-tab="admin-payments">
+                    <i class="fa-solid fa-credit-card"></i><span>Thanh Toán</span>
+                </button>
+            </div>
+
+            <!-- TAB: Tổng Quan -->
+            <div id="admin-stats" class="admin-tab-content active">
+                <div class="admin-stats-grid">
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background: linear-gradient(135deg, #4CAF50, #66BB6A);">
+                            <i class="fa-solid fa-bowl-food"></i>
+                        </div>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Tổng Món Ăn</span>
+                            <span class="admin-stat-value" id="st-foods">--</span>
+                        </div>
+                        <div class="admin-stat-accent"
+                            style="background: linear-gradient(135deg, rgba(76,175,80,0.15), transparent);"></div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background: linear-gradient(135deg, #06b6d4, #67e8f9);">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Người Dùng</span>
+                            <span class="admin-stat-value" id="st-users">--</span>
+                        </div>
+                        <div class="admin-stat-accent"
+                            style="background: linear-gradient(135deg, rgba(6,182,212,0.15), transparent);"></div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                            <i class="fa-solid fa-camera-retro"></i>
+                        </div>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Lượt Nhận Diện</span>
+                            <span class="admin-stat-value" id="st-recs">--</span>
+                        </div>
+                        <div class="admin-stat-accent"
+                            style="background: linear-gradient(135deg, rgba(245,158,11,0.15), transparent);"></div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                            <i class="fa-solid fa-crown"></i>
+                        </div>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Premium Users</span>
+                            <span class="admin-stat-value" id="st-premium">--</span>
+                        </div>
+                        <div class="admin-stat-accent"
+                            style="background: linear-gradient(135deg, rgba(245,158,11,0.15), transparent);"></div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </div>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Doanh Thu</span>
+                            <span class="admin-stat-value" id="st-revenue">--</span>
+                        </div>
+                        <div class="admin-stat-accent"
+                            style="background: linear-gradient(135deg, rgba(139,92,246,0.15), transparent);"></div>
+                    </div>
+                </div>
+
+                <!-- Top Foods Section -->
+                <div class="top-foods-section glass-card" style="margin-top: 20px; padding: 20px;">
+                    <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-fire" style="color: #ef4444;"></i> Top Món Ăn Được Nhận Diện Nhiều Nhất</h3>
+                    <div id="top-foods-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="history-loading"><i class="fa-solid fa-spinner fa-spin"></i><span>Đang tải...</span></div>
+                    </div>
+                </div>
+
+                <!-- Comments Overview Section -->
+                <div class="comments-overview-section" id="comments-overview-section">
+                    <h3 class="comments-overview-title">
+                        <i class="fa-solid fa-comments"></i> Tổng Hợp Bình Luận Phản Hồi
+                    </h3>
+
+                    <!-- Comment Stats Cards -->
+                    <div class="comment-stats-grid">
+                        <div class="comment-stat-card comment-stat-total">
+                            <div class="comment-stat-icon"><i class="fa-solid fa-message"></i></div>
+                            <div class="comment-stat-info">
+                                <span class="comment-stat-value" id="cs-total">0</span>
+                                <span class="comment-stat-label">Tổng bình luận</span>
+                            </div>
+                        </div>
+                        <div class="comment-stat-card comment-stat-pending">
+                            <div class="comment-stat-icon"><i class="fa-solid fa-clock"></i></div>
+                            <div class="comment-stat-info">
+                                <span class="comment-stat-value" id="cs-pending">0</span>
+                                <span class="comment-stat-label">Chưa phản hồi</span>
+                            </div>
+                        </div>
+                        <div class="comment-stat-card comment-stat-replied">
+                            <div class="comment-stat-icon"><i class="fa-solid fa-check-double"></i></div>
+                            <div class="comment-stat-info">
+                                <span class="comment-stat-value" id="cs-replied">0</span>
+                                <span class="comment-stat-label">Đã phản hồi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Comments -->
+                    <div class="recent-comments-panel glass-card">
+                        <h4><i class="fa-solid fa-clock-rotate-left" style="color: #3b82f6;"></i> Bình Luận Gần Đây</h4>
+                        <div id="recent-comments-list" class="recent-comments-list">
+                            <p class="rating-empty">Chưa có bình luận</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Món Ăn -->
+            <div id="admin-foods" class="admin-tab-content hidden">
+                <div class="admin-panel">
+                    <div class="admin-panel-header">
+                        <div>
+                            <h3><i class="fa-solid fa-utensils"></i> Quản Lý Món Ăn</h3>
+                            <p>Món ăn được thêm tự động bởi AI khi người dùng nhận diện. Admin chỉ sửa, khóa hoặc xóa.
+                            </p>
+                        </div>
+                        <div class="ai-auto-badge"
+                            style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.25); border-radius: 50px; font-size: 14px; font-weight: 600; color: var(--primary);">
+                            <i class="fa-solid fa-robot"></i> Tự động bởi AI
+                        </div>
+                    </div>
+                    <!-- Bulk Action Bar -->
+                    <div id="bulk-action-bar" class="bulk-action-bar hidden">
+                        <div class="bulk-top-row">
+                            <div class="bulk-action-left">
+                                <label class="bulk-checkbox-wrapper">
+                                    <input type="checkbox" id="bulk-select-all" title="Chọn / Bỏ chọn tất cả">
+                                    <span class="bulk-checkmark"></span>
+                                </label>
+                                <span class="bulk-count" id="bulk-count">0 món đã chọn</span>
+                            </div>
+                            <div class="bulk-action-right">
+                                <button class="btn btn-outline bulk-btn" id="btn-bulk-soft-delete">
+                                    <i class="fa-solid fa-ban"></i> Khóa tất cả
+                                </button>
+                                <button class="btn btn-outline bulk-btn bulk-btn-danger" id="btn-bulk-hard-delete">
+                                    <i class="fa-solid fa-trash"></i> Xóa vĩnh viễn tất cả
+                                </button>
+                                <button class="btn btn-outline bulk-btn" id="btn-bulk-cancel">
+                                    <i class="fa-solid fa-xmark"></i> Bỏ chọn
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bulk-selected-list" id="bulk-selected-list"></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên Món</th>
+                                    <th>Phân Loại</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-foods"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Người Dùng -->
+            <div id="admin-users" class="admin-tab-content hidden">
+                <div class="admin-panel">
+                    <div class="admin-panel-header">
+                        <div>
+                            <h3><i class="fa-solid fa-user-group"></i> Quản Lý Người Dùng</h3>
+                            <p>Xem thông tin và quản lý tài khoản người dùng trên hệ thống</p>
+                        </div>
+                        <span class="user-total-badge" id="user-total-badge">0 người dùng</span>
+                    </div>
+                    <!-- Filter / Search / Sort Bar -->
+                    <div class="user-filter-bar">
+                        <div class="user-search-wrap">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="user-search-input" class="form-input"
+                                placeholder="Tìm theo tên, email...">
+                        </div>
+                        <div class="user-filter-controls">
+                            <select id="user-role-filter" class="form-input user-filter-select">
+                                <option value="all">Tất cả vai trò</option>
+                                <option value="admin">Admin</option>
+                                <option value="user">User</option>
+                                <option value="google">Google User</option>
+                            </select>
+                            <select id="user-sort-select" class="form-input user-filter-select">
+                                <option value="newest">Mới nhất</option>
+                                <option value="oldest">Cũ nhất</option>
+                                <option value="name_az">Tên A → Z</option>
+                                <option value="most_active">Hoạt động nhiều nhất</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Avatar</th>
+                                    <th>Tên</th>
+                                    <th>Email</th>
+                                    <th>Vai Trò</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Phân Tích</th>
+                                    <th>Đăng Ký</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-users"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USER DETAIL MODAL -->
+            <div id="user-detail-overlay" class="modal-overlay hidden">
+                <div id="user-detail-modal" class="glass-card modal-box"
+                    style="max-width: 900px; max-height: 92vh; overflow-y: auto;">
+                    <button class="modal-close"
+                        onclick="document.getElementById('user-detail-overlay').classList.add('hidden')"><i
+                            class="fa-solid fa-times"></i></button>
+                    <div id="user-detail-content">
+                        <div class="history-loading">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            <span>Đang tải chi tiết...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Lịch Sử -->
+            <div id="admin-history" class="admin-tab-content hidden">
+                <div class="admin-panel">
+                    <div class="admin-panel-header">
+                        <div>
+                            <h3><i class="fa-solid fa-timeline"></i> Lịch Sử Nhận Diện</h3>
+                            <p>Theo dõi toàn bộ hoạt động nhận diện của người dùng trên hệ thống</p>
+                        </div>
+                    </div>
+
+                    <!-- Filter / Search Bar -->
+                    <div class="history-filter-bar" id="history-filter-bar">
+                        <div class="history-search-wrap">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="history-search-input" class="form-input"
+                                placeholder="Tìm theo tên món, người dùng...">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="history-view-toggle">
+                                <button class="view-btn active" data-view="grid" title="Dạng lưới">
+                                    <i class="fa-solid fa-grid-2"></i>
+                                </button>
+                                <button class="view-btn" data-view="table" title="Dạng bảng">
+                                    <i class="fa-solid fa-table-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid View (default) -->
+                    <div id="history-grid-view" class="history-grid">
+                        <div class="history-loading">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            <span>Đang tải dữ liệu...</span>
+                        </div>
+                    </div>
+
+                    <!-- Table View (hidden by default) -->
+                    <div id="history-table-view" class="table-responsive" style="display: none;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Ảnh</th>
+                                    <th>Người Dùng</th>
+                                    <th>Món Nhận Diện</th>
+                                    <th>Calo</th>
+                                    <th>Bình Luận</th>
+                                    <th>Thời Gian</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-history"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Phản Hồi -->
+            <div id="admin-comments" class="admin-tab-content hidden">
+                <div class="admin-panel">
+                    <div class="admin-panel-header">
+                        <div>
+                            <h3><i class="fa-solid fa-comments"></i> Quản Lý Phản Hồi</h3>
+                            <p>Xem và phản hồi bình luận của người dùng về kết quả nhận diện</p>
+                        </div>
+                        <div class="comment-filter-wrap">
+                            <select id="comment-filter-status" class="form-input"
+                                style="width: auto; padding: 8px 16px; font-size: 13px;">
+                                <option value="all">Tất cả</option>
+                                <option value="pending">Chưa phản hồi</option>
+                                <option value="replied">Đã phản hồi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="admin-comments-list" class="admin-comments-list">
+                        <div class="history-loading">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            <span>Đang tải bình luận...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Thanh Toán -->
+            <div id="admin-payments" class="admin-tab-content hidden">
+                <div class="admin-panel">
+                    <div class="admin-panel-header">
+                        <div>
+                            <h3><i class="fa-solid fa-credit-card"></i> Quản Lý Thanh Toán</h3>
+                            <p>Theo dõi giao dịch nâng cấp Premium qua PayOS</p>
+                        </div>
+                    </div>
+                    <!-- Payment Stats -->
+                    <div class="admin-stats-grid" id="payment-stats-grid" style="margin-bottom: 20px;">
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-icon" style="background: linear-gradient(135deg, #22c55e, #16a34a);">
+                                <i class="fa-solid fa-money-bill-trend-up"></i>
+                            </div>
+                            <div class="admin-stat-info">
+                                <span class="admin-stat-label">Tổng Doanh Thu</span>
+                                <span class="admin-stat-value" id="ps-revenue">0đ</span>
+                            </div>
+                            <div class="admin-stat-accent"
+                                style="background: linear-gradient(135deg, rgba(34,197,94,0.15), transparent);"></div>
+                        </div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div class="admin-stat-info">
+                                <span class="admin-stat-label">Thành Công</span>
+                                <span class="admin-stat-value" id="ps-success">0</span>
+                            </div>
+                            <div class="admin-stat-accent"
+                                style="background: linear-gradient(135deg, rgba(59,130,246,0.15), transparent);"></div>
+                        </div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div class="admin-stat-info">
+                                <span class="admin-stat-label">Đang Chờ</span>
+                                <span class="admin-stat-value" id="ps-pending">0</span>
+                            </div>
+                            <div class="admin-stat-accent"
+                                style="background: linear-gradient(135deg, rgba(245,158,11,0.15), transparent);"></div>
+                        </div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-icon" style="background: linear-gradient(135deg, #ef4444, #f87171);">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            </div>
+                            <div class="admin-stat-info">
+                                <span class="admin-stat-label">Thất Bại</span>
+                                <span class="admin-stat-value" id="ps-failed">0</span>
+                            </div>
+                            <div class="admin-stat-accent"
+                                style="background: linear-gradient(135deg, rgba(239,68,68,0.15), transparent);"></div>
+                        </div>
+                    </div>
+                    <!-- Payments Table -->
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã GD</th>
+                                    <th>Người Dùng</th>
+                                    <th>Số Tiền</th>
+                                    <th>Phương Thức</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Giao Dịch ID</th>
+                                    <th>Thời Gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-payments"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== HISTORY DETAIL MODAL ========== -->
+    <div id="history-detail-overlay" class="modal-overlay hidden">
+        <div id="history-detail-modal" class="glass-card modal-box"
+            style="max-width: 900px; max-height: 92vh; overflow-y: auto;">
+            <button class="modal-close"
+                onclick="document.getElementById('history-detail-overlay').classList.add('hidden')"><i
+                    class="fa-solid fa-times"></i></button>
+            <div id="history-detail-content">
+                <div class="history-loading">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <span>Đang tải chi tiết...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="/static/transitions.js?v=4"></script>
+    <script src="/static/admin.js?v=10"></script>
+</body>
+
+</html>

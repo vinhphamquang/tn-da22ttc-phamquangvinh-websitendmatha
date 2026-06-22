@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e8f5ec">
+    <style>
+        html {
+            background-color: #e8f5ec;
+        }
+
+        body {
+            background-color: #e8f5ec;
+        }
+
+        .app-page-veil {
+            position: fixed;
+            inset: 0;
+            z-index: 99998;
+            background-color: #e8f5ec;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        html.app-navigating .app-page-veil,
+        html.app-leaving .app-page-veil {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .app-page-veil.veil-fading-out {
+            transition: opacity 0.34s ease;
+        }
+    </style>
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem('app:nav')) {
+                    document.documentElement.classList.add('app-navigating');
+                }
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
+    <title>Kế Hoạch Dinh Dưỡng - SmartFoodAI</title>
+    <meta name="description"
+        content="Tính toán nhu cầu năng lượng cá nhân, BMR, TDEE, BMI và nhận đề xuất thực đơn phù hợp với mục tiêu sức khỏe của bạn.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css?v=5">
+    <link rel="stylesheet" href="/static/nutrition.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <!-- Cross-page veil: opaque overlay matching page bg, fades out when ready -->
+    <div id="app-page-veil" class="app-page-veil" aria-hidden="true"></div>
+
+    <!-- Animated Background Blobs -->
+    <div class="bg-blobs" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- ========== NAVBAR ========== -->
+    <header class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <i class="fa-solid fa-bowl-food"></i>
+                <span>SmartFood<strong>AI</strong></span>
+            </a>
+            <nav class="nav-links" id="nav-links">
+                <a href="/" class="nav-link">
+                    <i class="fa-solid fa-house"></i> Trang Chủ
+                </a>
+                <a href="/#analyze" class="nav-link">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i> Phân Tích
+                </a>
+                <a href="/nutrition" class="nav-link active">
+                    <i class="fa-solid fa-heart-pulse"></i> Kế Hoạch Dinh Dưỡng
+                </a>
+                <a href="/admin" class="nav-link" id="nav-admin-link" style="display: none;">
+                    <i class="fa-solid fa-shield-halved"></i> Admin
+                </a>
+                <div class="nav-auth" id="user-section">
+                    <!-- Notification Bell -->
+                    <div class="notif-bell-wrap" id="notif-bell-wrap" style="display: none;">
+                        <button class="notif-bell-btn" id="notif-bell-btn" title="Thông báo">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="notif-badge" id="notif-badge" style="display: none;">0</span>
+                        </button>
+                        <div class="notif-dropdown hidden" id="notif-dropdown">
+                            <div class="notif-dropdown-header">
+                                <span><i class="fa-solid fa-bell"></i> Thông Báo</span>
+                                <button class="notif-read-all" id="notif-read-all" title="Đánh dấu tất cả đã đọc">
+                                    <i class="fa-solid fa-check-double"></i>
+                                </button>
+                            </div>
+                            <div class="notif-dropdown-body" id="notif-dropdown-body">
+                                <div class="notif-empty"><i class="fa-solid fa-bell-slash"></i>
+                                    <p>Chưa có thông báo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="/#profile" class="nav-link" id="nav-user-name" style="cursor: pointer;">
+                        <i class="fa-solid fa-user"></i> <span id="display-username">User</span>
+                    </a>
+                    <button id="btn-logout" class="btn btn-outline" style="padding: 8px 16px; font-size: 14px;">
+                        <i class="fa-solid fa-right-from-bracket"></i> Đăng Xuất
+                    </button>
+                </div>
+            </nav>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="nutrition-page">
+        <!-- Page Hero Header -->
+        <div class="nutrition-hero">
+            <div class="nutrition-hero-content">
+                <span class="section-tag"><i class="fa-solid fa-heart-pulse"></i> Dinh Dưỡng</span>
+                <h1 class="section-title">Kế Hoạch <span class="gradient-text">Dinh Dưỡng</span> Cá Nhân</h1>
+                <p class="section-desc">Tính toán nhu cầu năng lượng và đề xuất thực đơn phù hợp với mục tiêu của bạn
+                </p>
+            </div>
+        </div>
+
+        <div class="nutrition-container">
+            <!-- Health Profile Form -->
+            <section class="nutrition-section glass-card" id="health-profile-section">
+                <div class="section-icon-header">
+                    <div class="section-icon-wrap">
+                        <i class="fa-solid fa-user-doctor"></i>
+                    </div>
+                    <div>
+                        <h2>Hồ Sơ Sức Khỏe</h2>
+                        <p>Nhập thông tin cá nhân để tính toán nhu cầu dinh dưỡng</p>
+                    </div>
+                </div>
+                <form id="health-profile-form">
+                    <div class="np-form-grid">
+                        <div class="np-form-group">
+                            <label for="weight"><i class="fa-solid fa-weight-scale"></i> Cân nặng (kg) <span
+                                    class="required-star">*</span></label>
+                            <input type="number" id="weight" step="0.1" min="30" max="200" required
+                                placeholder="VD: 65">
+                        </div>
+                        <div class="np-form-group">
+                            <label for="height"><i class="fa-solid fa-ruler-vertical"></i> Chiều cao (cm) <span
+                                    class="required-star">*</span></label>
+                            <input type="number" id="height" step="0.1" min="100" max="250" required
+                                placeholder="VD: 170">
+                        </div>
+                        <div class="np-form-group">
+                            <label for="age"><i class="fa-solid fa-calendar"></i> Tuổi <span
+                                    class="required-star">*</span></label>
+                            <input type="number" id="age" min="10" max="100" required placeholder="VD: 25">
+                        </div>
+                        <div class="np-form-group">
+                            <label for="gender"><i class="fa-solid fa-venus-mars"></i> Giới tính <span
+                                    class="required-star">*</span></label>
+                            <select id="gender" required>
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                            </select>
+                        </div>
+                        <div class="np-form-group">
+                            <label for="activity"><i class="fa-solid fa-person-running"></i> Mức độ vận động <span
+                                    class="required-star">*</span></label>
+                            <select id="activity" required>
+                                <option value="Ít">Ít vận động (văn phòng)</option>
+                                <option value="Vừa" selected>Vừa phải (tập 3-4 lần/tuần)</option>
+                                <option value="Nhiều">Nhiều (tập hàng ngày)</option>
+                            </select>
+                        </div>
+                        <div class="np-form-group">
+                            <label for="goal"><i class="fa-solid fa-bullseye"></i> Mục tiêu <span
+                                    class="required-star">*</span></label>
+                            <select id="goal" required>
+                                <option value="Giảm cân">Giảm cân</option>
+                                <option value="Duy trì" selected>Duy trì cân nặng</option>
+                                <option value="Tăng cân">Tăng cân</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary np-submit-btn">
+                        <i class="fa-solid fa-calculator"></i> Tính Toán & Tạo Kế Hoạch
+                    </button>
+                </form>
+            </section>
+
+            <!-- Results Section -->
+            <div id="results-section" class="hidden">
+                <!-- BMR & TDEE Results -->
+                <section class="nutrition-section glass-card">
+                    <div class="section-icon-header">
+                        <div class="section-icon-wrap accent-gradient">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <h2>Kết Quả Tính Toán</h2>
+                            <p>Thông tin năng lượng và chỉ số cơ thể của bạn</p>
+                        </div>
+                    </div>
+                    <div class="np-stats-grid">
+                        <div class="np-stat-card">
+                            <div class="np-stat-icon" style="--stat-color: #f59e0b;">
+                                <i class="fa-solid fa-fire"></i>
+                            </div>
+                            <div class="np-stat-info">
+                                <span class="np-stat-label">BMR (Trao đổi chất cơ bản)</span>
+                                <span class="np-stat-value" id="bmr-value">--</span>
+                                <span class="np-stat-unit">kcal/ngày</span>
+                            </div>
+                        </div>
+                        <div class="np-stat-card">
+                            <div class="np-stat-icon" style="--stat-color: #ef4444;">
+                                <i class="fa-solid fa-person-running"></i>
+                            </div>
+                            <div class="np-stat-info">
+                                <span class="np-stat-label">TDEE (Tổng năng lượng tiêu hao)</span>
+                                <span class="np-stat-value" id="tdee-value">--</span>
+                                <span class="np-stat-unit">kcal/ngày</span>
+                            </div>
+                        </div>
+                        <div class="np-stat-card">
+                            <div class="np-stat-icon" style="--stat-color: #22c55e;">
+                                <i class="fa-solid fa-bullseye"></i>
+                            </div>
+                            <div class="np-stat-info">
+                                <span class="np-stat-label">Calo mục tiêu</span>
+                                <span class="np-stat-value" id="target-value">--</span>
+                                <span class="np-stat-unit">kcal/ngày</span>
+                            </div>
+                        </div>
+                        <div class="np-stat-card">
+                            <div class="np-stat-icon" style="--stat-color: #3b82f6;">
+                                <i class="fa-solid fa-weight-scale"></i>
+                            </div>
+                            <div class="np-stat-info">
+                                <span class="np-stat-label">BMI</span>
+                                <span class="np-stat-value" id="bmi-value">--</span>
+                                <span class="np-stat-unit" id="bmi-category">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Body Assessment (BMI in detail) -->
+                <section class="nutrition-section glass-card np-bmi-assessment" id="bmi-assessment-section">
+                    <div class="section-icon-header">
+                        <div class="section-icon-wrap" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+                            <i class="fa-solid fa-stethoscope"></i>
+                        </div>
+                        <div>
+                            <h2>Đánh Giá Thể Trạng</h2>
+                            <p>Phân tích chỉ số BMI và khuyến nghị dinh dưỡng phù hợp</p>
+                        </div>
+                    </div>
+                    <div class="np-bmi-grid">
+                        <div class="np-bmi-main" id="bmi-main-card">
+                            <div class="np-bmi-number" id="bmi-number">--</div>
+                            <div class="np-bmi-badge" id="bmi-badge">Đang tải</div>
+                            <div class="np-bmi-range">Khoảng BMI: <span id="bmi-range-text">--</span></div>
+                        </div>
+                        <div class="np-bmi-detail">
+                            <div class="np-bmi-recommendation" id="bmi-recommendation">
+                                Hãy nhập đầy đủ thông tin để nhận đánh giá thể trạng.
+                            </div>
+                            <div class="np-bmi-goal-banner hidden" id="bmi-goal-banner">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <span id="bmi-goal-text"></span>
+                            </div>
+                            <div class="np-bmi-scale">
+                                <div class="np-bmi-scale-bar">
+                                    <div class="np-bmi-scale-seg" style="background:#3b82f6;flex:1.85"
+                                        title="Gầy (<18.5)"></div>
+                                    <div class="np-bmi-scale-seg" style="background:#22c55e;flex:0.65"
+                                        title="Bình thường (18.5-25)"></div>
+                                    <div class="np-bmi-scale-seg" style="background:#f59e0b;flex:0.5"
+                                        title="Thừa cân (25-30)"></div>
+                                    <div class="np-bmi-scale-seg" style="background:#ef4444;flex:1"
+                                        title="Béo phì (≥30)"></div>
+                                </div>
+                                <div class="np-bmi-scale-marker" id="bmi-scale-marker" style="left:0%"></div>
+                                <div class="np-bmi-scale-labels">
+                                    <span>15</span><span>18.5</span><span>25</span><span>30</span><span>40</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Macro Distribution -->
+                <section class="nutrition-section glass-card">
+                    <div class="section-icon-header">
+                        <div class="section-icon-wrap warning-gradient">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <h2>Phân Bổ Calo Theo Bữa</h2>
+                            <p>Phân chia lượng calo hợp lý cho từng bữa ăn trong ngày</p>
+                        </div>
+                    </div>
+                    <div class="np-meal-grid">
+                        <div class="np-meal-card">
+                            <div class="np-meal-emoji">🌅</div>
+                            <div class="np-meal-name">Bữa Sáng</div>
+                            <div class="np-meal-percent">25%</div>
+                            <div class="np-meal-calo" id="breakfast-calo">-- kcal</div>
+                            <div class="np-meal-bar">
+                                <div class="np-meal-bar-fill" style="width: 25%;"></div>
+                            </div>
+                        </div>
+                        <div class="np-meal-card">
+                            <div class="np-meal-emoji">☀️</div>
+                            <div class="np-meal-name">Bữa Trưa</div>
+                            <div class="np-meal-percent">35%</div>
+                            <div class="np-meal-calo" id="lunch-calo">-- kcal</div>
+                            <div class="np-meal-bar">
+                                <div class="np-meal-bar-fill" style="width: 35%;"></div>
+                            </div>
+                        </div>
+                        <div class="np-meal-card">
+                            <div class="np-meal-emoji">🌙</div>
+                            <div class="np-meal-name">Bữa Tối</div>
+                            <div class="np-meal-percent">30%</div>
+                            <div class="np-meal-calo" id="dinner-calo">-- kcal</div>
+                            <div class="np-meal-bar">
+                                <div class="np-meal-bar-fill" style="width: 30%;"></div>
+                            </div>
+                        </div>
+                        <div class="np-meal-card">
+                            <div class="np-meal-emoji">🍎</div>
+                            <div class="np-meal-name">Bữa Phụ</div>
+                            <div class="np-meal-percent">10%</div>
+                            <div class="np-meal-calo" id="snack-calo">-- kcal</div>
+                            <div class="np-meal-bar">
+                                <div class="np-meal-bar-fill" style="width: 10%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Meal Suggestions: Bữa Sáng -->
+                <section class="nutrition-section glass-card np-meal-section" id="section-breakfast">
+                    <div class="np-meal-section-header">
+                        <div class="np-meal-section-icon breakfast-bg">🌅</div>
+                        <div class="np-meal-section-info">
+                            <h3>Bữa Sáng <span class="np-meal-section-percent">25%</span></h3>
+                            <p>Mục tiêu: <strong id="breakfast-target">--</strong> kcal</p>
+                        </div>
+                    </div>
+                    <div id="breakfast-suggestions" class="np-food-grid">
+                        <div class="np-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
+                    </div>
+                </section>
+
+                <!-- Meal Suggestions: Bữa Trưa -->
+                <section class="nutrition-section glass-card np-meal-section" id="section-lunch">
+                    <div class="np-meal-section-header">
+                        <div class="np-meal-section-icon lunch-bg">☀️</div>
+                        <div class="np-meal-section-info">
+                            <h3>Bữa Trưa <span class="np-meal-section-percent">35%</span></h3>
+                            <p>Mục tiêu: <strong id="lunch-target">--</strong> kcal</p>
+                        </div>
+                    </div>
+                    <div id="lunch-suggestions" class="np-food-grid">
+                        <div class="np-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
+                    </div>
+                </section>
+
+                <!-- Meal Suggestions: Bữa Tối -->
+                <section class="nutrition-section glass-card np-meal-section" id="section-dinner">
+                    <div class="np-meal-section-header">
+                        <div class="np-meal-section-icon dinner-bg">🌙</div>
+                        <div class="np-meal-section-info">
+                            <h3>Bữa Tối <span class="np-meal-section-percent">30%</span></h3>
+                            <p>Mục tiêu: <strong id="dinner-target">--</strong> kcal</p>
+                        </div>
+                    </div>
+                    <div id="dinner-suggestions" class="np-food-grid">
+                        <div class="np-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
+                    </div>
+                </section>
+
+                <!-- Meal Suggestions: Bữa Phụ -->
+                <section class="nutrition-section glass-card np-meal-section" id="section-snack">
+                    <div class="np-meal-section-header">
+                        <div class="np-meal-section-icon snack-bg">🍎</div>
+                        <div class="np-meal-section-info">
+                            <h3>Bữa Phụ <span class="np-meal-section-percent">10%</span></h3>
+                            <p>Mục tiêu: <strong id="snack-target">--</strong> kcal</p>
+                        </div>
+                    </div>
+                    <div id="snack-suggestions" class="np-food-grid">
+                        <div class="np-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
+                    </div>
+                </section>
+
+                <!-- Daily Meal Summary -->
+                <section class="nutrition-section glass-card np-daily-summary hidden" id="daily-summary">
+                    <div class="section-icon-header">
+                        <div class="section-icon-wrap" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                        <div>
+                            <h2>Thực Đơn Đã Chọn</h2>
+                            <p>Tổng kết các món ăn bạn đã chọn cho cả ngày</p>
+                        </div>
+                    </div>
+                    <div id="summary-content"></div>
+                    <div class="np-summary-total" id="summary-total"></div>
+                    <div class="np-save-area" id="save-area">
+                        <button class="btn btn-primary np-save-btn" id="btn-save-plan" onclick="saveMealPlan()">
+                            <i class="fa-solid fa-floppy-disk"></i> Lưu Kế Hoạch Hôm Nay
+                        </button>
+                        <span class="np-save-status" id="save-status"></span>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Weight History -->
+        <div class="nutrition-container">
+            <section class="nutrition-section glass-card" id="weight-history-section">
+                <div class="section-icon-header">
+                    <div class="section-icon-wrap" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                        <i class="fa-solid fa-weight-scale"></i>
+                    </div>
+                    <div>
+                        <h2>Lịch Sử Cân Nặng</h2>
+                        <p>Theo dõi tiến trình cân nặng và BMI của bạn theo thời gian</p>
+                    </div>
+                </div>
+                <div class="np-weight-stats" id="weight-stats">
+                    <div class="np-weight-stat-card">
+                        <span class="np-weight-stat-label"><i class="fa-solid fa-weight-scale"></i> Cân nặng hiện
+                            tại</span>
+                        <span class="np-weight-stat-value" id="wh-current">--</span>
+                        <span class="np-weight-stat-unit">kg</span>
+                    </div>
+                    <div class="np-weight-stat-card">
+                        <span class="np-weight-stat-label"><i class="fa-solid fa-arrows-up-down"></i> Tổng thay
+                            đổi</span>
+                        <span class="np-weight-stat-value" id="wh-change">--</span>
+                        <span class="np-weight-stat-unit">kg</span>
+                    </div>
+                    <div class="np-weight-stat-card">
+                        <span class="np-weight-stat-label"><i class="fa-solid fa-list-ol"></i> Số lần cập nhật</span>
+                        <span class="np-weight-stat-value" id="wh-count">--</span>
+                        <span class="np-weight-stat-unit">lần</span>
+                    </div>
+                </div>
+                <div class="np-weight-chart-wrap">
+                    <canvas id="weight-chart" height="90"></canvas>
+                </div>
+                <div class="np-weight-history-list" id="weight-history-list">
+                    <div class="np-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Meal Plan History - Redirect to Profile -->
+        <div class="nutrition-container">
+            <section class="nutrition-section glass-card" id="plan-history-section">
+                <div class="section-icon-header">
+                    <div class="section-icon-wrap" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+                        <i class="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div>
+                        <h2>Lịch Sử Dinh Dưỡng</h2>
+                        <p>Tổng hợp kế hoạch dinh dưỡng đã lưu theo tháng</p>
+                    </div>
+                </div>
+                <div id="plan-history-content">
+                    <div class="np-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải lịch sử...</div>
+                </div>
+                <div
+                    style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid rgba(34,197,94,0.1);">
+                    <a href="/#profile"
+                        style="color:var(--primary);font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;">
+                        <i class="fa-solid fa-user-circle"></i> Xem đầy đủ trong Hồ Sơ Cá Nhân
+                        <i class="fa-solid fa-arrow-right" style="font-size:12px;"></i>
+                    </a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <i class="fa-solid fa-bowl-food"></i>
+                    <span>SmartFood<strong>AI</strong></span>
+                </div>
+                <p>Hệ thống nhận diện món ăn Việt Nam thông minh sử dụng trí tuệ nhân tạo.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Điều Hướng</h4>
+                <a href="/"><i class="fa-solid fa-chevron-right"></i> Trang Chủ</a>
+                <a href="/nutrition"><i class="fa-solid fa-chevron-right"></i> Kế Hoạch Dinh Dưỡng</a>
+            </div>
+            <div class="footer-tech">
+                <h4>Công Nghệ</h4>
+                <div class="footer-tech-tags">
+                    <span><i class="fa-brands fa-python"></i> Python</span>
+                    <span><i class="fa-solid fa-flask"></i> Flask</span>
+                    <span><i class="fa-solid fa-database"></i> PostgreSQL</span>
+                    <span><i class="fa-solid fa-eye"></i> Vision API</span>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Smart Food Analysis — Đề Tài Khóa Luận Tốt Nghiệp</p>
+        </div>
+    </footer>
+
+    <!-- Weight Change Modal -->
+    <div class="np-weight-modal-overlay hidden" id="weight-modal-overlay">
+        <div class="np-weight-modal" id="weight-modal">
+            <button class="np-weight-modal-close" id="weight-modal-close" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="np-weight-modal-icon" id="weight-modal-icon">🎉</div>
+            <div class="np-weight-modal-title" id="weight-modal-title">Chúc mừng!</div>
+            <div class="np-weight-modal-desc" id="weight-modal-desc"></div>
+            <div class="np-weight-modal-compare" id="weight-modal-compare">
+                <div class="np-weight-modal-old">
+                    <span class="np-weight-modal-label">Trước</span>
+                    <span class="np-weight-modal-value" id="weight-modal-old-val">--</span>
+                </div>
+                <div class="np-weight-modal-arrow">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+                <div class="np-weight-modal-new">
+                    <span class="np-weight-modal-label">Hiện tại</span>
+                    <span class="np-weight-modal-value" id="weight-modal-new-val">--</span>
+                </div>
+            </div>
+            <div class="np-weight-modal-diff" id="weight-modal-diff"></div>
+            <button class="btn btn-primary np-weight-modal-btn" id="weight-modal-ok">
+                <i class="fa-solid fa-check"></i> Đóng
+            </button>
+        </div>
+    </div>
+
+    <script src="/static/transitions.js?v=4"></script>
+    <script src="/static/nutrition.js"></script>
+</body>
+
+</html>

@@ -40,3 +40,15 @@ saved_model/**/* filter=lfs diff=lfs merge=lfs -text
 .venv/Lib/site-packages/psycopg2_binary.libs/libcrypto-3-x64-00fd260ae72c744ee1352e64a568f454.dll filter=lfs diff=lfs merge=lfs -text
 .venv/Lib/site-packages/psycopg2_binary.libs/libpq-59fb91041b8033400b68b6f333423fb2.dll filter=lfs diff=lfs merge=lfs -text
 .venv/Lib/site-packages/psycopg2_binary.libs/libssl-3-x64-42d016cedaa8505e1c2f3866222613c3.dll filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/dotenv.exe filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/flask.exe filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/normalizer.exe filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/pip.exe filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/pip3.12.exe filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/pip3.exe filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/python.exe filter=lfs diff=lfs merge=lfs -text
+.venv/Scripts/pythonw.exe filter=lfs diff=lfs merge=lfs -text
+backend/backups/backup_20260525_190826.sql filter=lfs diff=lfs merge=lfs -text
+frontend/images/slide1.jpg filter=lfs diff=lfs merge=lfs -text
+frontend/images/slide4.jpg filter=lfs diff=lfs merge=lfs -text
+frontend/images/slide5.jpg filter=lfs diff=lfs merge=lfs -text

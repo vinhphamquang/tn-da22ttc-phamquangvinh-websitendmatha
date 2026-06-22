@@ -1,0 +1,12 @@
+flask
+flask-cors
+requests
+google-generativeai
+python-dotenv
+psycopg2-binary
+gunicorn
+psycopg2-binary
+google-auth
+requests
+
+payos

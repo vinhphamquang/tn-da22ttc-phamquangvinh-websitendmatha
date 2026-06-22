@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trạng Thái Thanh Toán - SmartFoodAI</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-deep: #e8f5ec;
+            --primary: #22c55e;
+            --primary-dark: #16a34a;
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
+            --text-main: #1f2937;
+            --text-secondary: #4b5563;
+            --text-muted: #9ca3af;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bg-blobs {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.2;
+            animation: float 10s infinite alternate;
+        }
+
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--primary);
+            top: -10%;
+            left: -10%;
+        }
+
+        .blob-2 {
+            width: 300px;
+            height: 300px;
+            background: #3b82f6;
+            bottom: -5%;
+            right: -5%;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 30px); }
+        }
+
+        .result-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .icon-circle {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 20px;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .success-theme .icon-circle {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.3);
+            animation: pulseSuccess 2s infinite;
+        }
+
+        .failed-theme .icon-circle {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+            animation: shakeError 0.5s ease-in-out;
+        }
+
+        @keyframes pulseSuccess {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        @keyframes shakeError {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .success-theme .title { color: var(--primary-dark); }
+        .failed-theme .title { color: var(--danger-dark); }
+
+        .message {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .order-info {
+            background: rgba(0,0,0,0.03);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .info-val {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-home {
+            background: var(--text-main);
+            color: white;
+            margin-bottom: 12px;
+        }
+        
+        .btn-home:hover {
+            background: #111827;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn-retry {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-dark);
+        }
+
+        .btn-retry:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Hide elements by default */
+        .theme-content { display: none; }
+
+        /* Confetti */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f2d74e;
+            opacity: 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-blobs">
+        <div class="blob blob-1" id="dynamic-blob"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="result-container">
+        <div class="glass-card" id="result-card">
+            
+            <!-- LOADING STATE -->
+            <div id="loading-state" style="padding: 20px 0;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: var(--primary); margin-bottom: 20px;"></i>
+                <h2 style="font-size: 20px;">Đang kiểm tra kết quả...</h2>
+            </div>
+
+            <!-- SUCCESS STATE -->
+            <div id="success-state" class="theme-content success-theme">
+                <div class="icon-circle">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h1 class="title">Thanh Toán Thành Công!</h1>
+                <p class="message">Cảm ơn bạn. Tài khoản của bạn đã được nâng cấp lên <strong>Premium</strong> thành công. Hãy bắt đầu trải nghiệm ngay!</p>
+                
+                <div class="order-info">
+                    <div class="info-row">
+                        <span class="info-label">Mã giao dịch</span>
+                        <span class="info-val" id="success-order-id">---</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Thời gian</span>
+                        <span class="info-val" id="success-time">---</span>
+                    </div>
+                </div>
+
+                <a href="/" class="btn btn-home"><i class="fa-solid fa-house"></i> Về trang chủ</a>
+            </div>
+
+            <!-- FAILED STATE -->
+            <div id="failed-state" class="theme-content failed-theme">
+                <div class="icon-circle">
+                    <i class="fa-solid fa-xmark"></i>
+                </div>
+                <h1 class="title">Giao Dịch Thất Bại</h1>
+                <p class="message">Thanh toán chưa được hoàn tất hoặc đã bị hủy. Tài khoản của bạn chưa bị trừ tiền.</p>
+                
+                <div class="order-info">
+                    <div class="info-row">
+                        <span class="info-label">Mã giao dịch</span>
+                        <span class="info-val" id="failed-order-id">---</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Lý do</span>
+                        <span class="info-val">Người dùng hủy / Lỗi GD</span>
+                    </div>
+                </div>
+
+                <a href="/thanh-toan" class="btn btn-retry" style="margin-bottom: 12px;"><i class="fa-solid fa-rotate-right"></i> Thử lại</a>
+                <a href="/" class="btn btn-home"><i class="fa-solid fa-house"></i> Về trang chủ</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paymentStatus = urlParams.get('payment'); // 'success' or 'failed'
+            const resultCode = urlParams.get('resultCode');
+            const orderId = urlParams.get('orderId') || '---';
+
+            const loadingState = document.getElementById('loading-state');
+            const successState = document.getElementById('success-state');
+            const failedState = document.getElementById('failed-state');
+            const card = document.getElementById('result-card');
+            const blob = document.getElementById('dynamic-blob');
+
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                            now.getMinutes().toString().padStart(2, '0') + ' ' + 
+                            now.getDate().toString().padStart(2, '0') + '/' + 
+                            (now.getMonth()+1).toString().padStart(2, '0') + '/' + 
+                            now.getFullYear();
+
+            setTimeout(() => {
+                loadingState.style.display = 'none';
+
+                if (paymentStatus === 'success' || resultCode === '0') {
+                    // Success
+                    card.classList.add('success-theme');
+                    successState.style.display = 'block';
+                    document.getElementById('success-order-id').textContent = orderId;
+                    document.getElementById('success-time').textContent = timeStr;
+                    blob.style.background = 'var(--primary)';
+                    
+                    // Cập nhật localStorage ngay trên client nếu nó chưa kip lấy
+                    try {
+                        const userRaw = localStorage.getItem('smartfood_user');
+                        if (userRaw) {
+                            const userObj = JSON.parse(userRaw);
+                            userObj.account_type = 'premium';
+                            localStorage.setItem('smartfood_user', JSON.stringify(userObj));
+                        }
+                    } catch(e) {}
+
+                    triggerConfetti();
+                } else {
+                    // Failed
+                    card.classList.add('failed-theme');
+                    failedState.style.display = 'block';
+                    document.getElementById('failed-order-id').textContent = orderId;
+                    blob.style.background = 'var(--danger)';
+                }
+            }, 800); // Fake delay for smooth UX
+        });
+
+        function triggerConfetti() {
+            const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
+            
+            for (let i = 0; i < 60; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                
+                // Random styles
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Random animation variables
+                const duration = Math.random() * 3 + 2;
+                const delay = Math.random() * 1;
+                
+                confetti.animate([
+                    { transform: `translate3d(0, -10vh, 0) rotate(0deg)`, opacity: 1 },
+                    { transform: `translate3d(${Math.random() * 200 - 100}px, 100vh, 0) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+                ], {
+                    duration: duration * 1000,
+                    delay: delay * 1000,
+                    easing: 'cubic-bezier(.37,0,.63,1)',
+                    fill: 'forwards'
+                });
+                
+                document.body.appendChild(confetti);
+                
+                setTimeout(() => {
+                    confetti.remove();
+                }, (duration + delay) * 1000);
+            }
+        }
+    </script>
+</body>
+</html>
