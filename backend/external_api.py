@@ -211,98 +211,167 @@ def recognize_food_spoonacular(image_bytes: bytes):
 
 def recognize_food_gemini(image_bytes: bytes):
     """
-    Sử dụng Gemini API - AI mạnh mẽ của Google cho food recognition
+    Sử dụng Gemini API - AI mạnh mẽ của Google cho food recognition.
+    Trả về structured JSON với tên tiếng Việt, tiếng Anh, confidence, và is_food.
+    
+    Returns:
+        tuple: (food_name_vi, food_name_en, confidence, error_msg)
+        - Nếu NOT_FOOD: ("NOT_FOOD", None, 0.99, None)
+        - Nếu thành công: ("Phở Bò", "pho_bo", 0.92, None)
+        - Nếu lỗi: (None, None, 0.0, "error message")
     """
     if not GEMINI_API_KEY:
-        return None, 0.0, "Thiếu GEMINI_API_KEY"
+        return None, None, 0.0, "Thiếu GEMINI_API_KEY"
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
     encoded_image = base64.b64encode(image_bytes).decode('utf-8')
     
     payload = {
         "contents": [{
             "parts": [
-                {"text": """Analyze this food image carefully. 
+                {"text": """Bạn là chuyên gia nhận diện món ăn. Phân tích hình ảnh này và trả về JSON.
 
-If the image does NOT contain any food or dish (e.g., person, animal, object, scenery, text), reply with ONLY: NOT_FOOD
+**QUY TẮC QUAN TRỌNG:**
 
-If the image DOES contain food, identify the SPECIFIC dish name. Reply with ONLY the dish name in snake_case, nothing else.
+1. **KIỂM TRA ĐÂY CÓ PHẢI MÓN ĂN KHÔNG:**
+   - Nếu hình ảnh KHÔNG chứa món ăn/thức ăn/đồ uống (ví dụ: người, động vật, đồ vật, phong cảnh, xe cộ, văn bản, logo, tài liệu, điện thoại, máy tính, quần áo, cây cối không phải rau/quả), đặt is_food = false.
+   - Chỉ đặt is_food = true khi hình ảnh THỰC SỰ chứa món ăn đã chế biến, thực phẩm, hoặc đồ uống.
 
-IMPORTANT RULES:
-- For Vietnamese soups/canh dishes, identify the SPECIFIC type. Do NOT just say "soup" or "sour_soup". Instead identify:
-  + canh_chua_ca (sour fish soup), canh_chua_tom (sour shrimp soup)
-  + canh_kho_qua (bitter melon soup), canh_kho_qua_nhoi_thit (stuffed bitter melon soup)
-  + canh_bi_dao (winter melon soup), canh_bi_do (pumpkin soup)
-  + canh_mong_toi (Malabar spinach soup), canh_cai_xoong (watercress soup)
-  + canh_bau (gourd soup), canh_bap_cai (cabbage soup)
-  + canh_suon (pork rib soup), canh_rau (vegetable soup)
-  + canh_ca_chua_trung (tomato egg soup), canh_rong_bien (seaweed soup)
-- For Vietnamese noodle soups: pho_bo, pho_ga, bun_bo_hue, bun_rieu, hu_tieu, banh_canh, mi_quang
-- For Vietnamese stews/braised: thit_kho, ca_kho_to, bo_kho
-- For hotpots: lau_thai, lau_hai_san, lau_nam
-- For other Vietnamese dishes, use Vietnamese romanized names without diacritics: com_tam, banh_mi, bun_cha, goi_cuon, banh_xeo
-- For non-Vietnamese dishes, use English: pizza, sushi, hamburger, pasta, steak
+2. **NẾU LÀ MÓN ĂN, NHẬN DIỆN CỤ THỂ:**
+   - Tên tiếng Việt phải CÓ DẤU đầy đủ (ví dụ: "Phở Bò", "Bánh Mì", "Bún Bò Huế")
+   - Nhận diện nguyên liệu chính nhìn thấy được (cá, tôm, thịt heo, gà, bò, đậu hũ, rau) để đặt tên cụ thể nhất
+   - Với món Việt: dùng tên tiếng Việt có dấu (Phở Bò, Cơm Tấm Sườn, Bánh Xèo, Canh Chua Cá...)
+   - Với món quốc tế: dùng tên phổ biến tại Việt Nam (Pizza, Sushi, Hamburger, Mì Ý...)
+   - Với canh/soup Việt: nhận diện CỤ THỂ loại canh (Canh Chua Cá, Canh Khổ Qua Nhồi Thịt, Canh Bí Đao...) — KHÔNG chỉ ghi "Canh" hay "Soup"
 
-Identify the KEY INGREDIENT visible in the dish (fish, shrimp, pork, chicken, beef, tofu, vegetables) to give the most specific name possible.
+3. **TỰ ĐÁNH GIÁ ĐỘ TIN CẬY (confidence):**
+   - 0.9 - 1.0: Rất chắc chắn, nhìn rõ ràng
+   - 0.7 - 0.89: Khá chắc chắn nhưng có thể nhầm với món tương tự
+   - 0.5 - 0.69: Không chắc lắm, hình ảnh mờ hoặc góc chụp khó
+   - Dưới 0.5: Đoán, rất không chắc
 
-Reply with ONLY the dish name, nothing else."""},
+Trả về JSON theo cấu trúc sau:
+{
+  "is_food": true/false,
+  "food_name_vi": "Tên tiếng Việt có dấu",
+  "food_name_en": "english_name_snake_case",
+  "confidence": 0.0-1.0,
+  "category": "Phân loại (Món nước/Món khô/Món nướng/Tráng miệng/Đồ uống/Không phải món ăn)"
+}
+
+Nếu is_food = false, các trường food_name_vi, food_name_en để chuỗi rỗng, confidence = 0."""},
                 {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}
             ]
         }],
-        "generationConfig": {"temperature": 0.1}
+        "generationConfig": {
+            "temperature": 0.1,
+            "responseMimeType": "application/json"
+        }
     }
     
     try:
-        print(f"[DEBUG] Trying Gemini API...")
-        response = requests.post(url, json=payload, timeout=15)
+        print(f"[DEBUG] Trying Gemini API (structured JSON)...")
+        response = requests.post(url, json=payload, timeout=20)
         
         if response.status_code == 200:
             data = response.json()
-            label = data['candidates'][0]['content']['parts'][0]['text'].strip().lower()
-            print(f"[DEBUG] Gemini success: {label}")
+            text = data['candidates'][0]['content']['parts'][0]['text'].strip()
+            print(f"[DEBUG] Gemini raw response: {text}")
+            
+            # Parse JSON response
+            result = json.loads(text)
+            
+            is_food = result.get("is_food", False)
+            food_name_vi = result.get("food_name_vi", "").strip()
+            food_name_en = result.get("food_name_en", "").strip()
+            confidence = float(result.get("confidence", 0.0))
             
             # Kiểm tra nếu không phải món ăn
-            if label == "not_food":
+            if not is_food:
                 print(f"[DEBUG] Gemini detected: NOT FOOD")
-                return "NOT_FOOD", 0.99, None
+                return "NOT_FOOD", None, 0.99, None
             
-            return label, 0.95, None
+            # Kiểm tra kết quả hợp lệ
+            if not food_name_vi and not food_name_en:
+                print(f"[DEBUG] Gemini returned empty food names")
+                return None, None, 0.0, "Gemini: Không nhận diện được tên món ăn"
+            
+            # Nếu chỉ có tên tiếng Anh mà không có tiếng Việt
+            if not food_name_vi and food_name_en:
+                food_name_vi = food_name_en.replace("_", " ").title()
+            
+            print(f"[DEBUG] Gemini success: vi='{food_name_vi}', en='{food_name_en}', confidence={confidence}")
+            return food_name_vi, food_name_en, confidence, None
         else:
             error_msg = f"Gemini API lỗi {response.status_code}"
             print(f"[DEBUG] {error_msg}")
-            return None, 0.0, error_msg
+            return None, None, 0.0, error_msg
             
+    except json.JSONDecodeError as e:
+        print(f"[DEBUG] Gemini JSON parse error: {e}")
+        # Fallback: thử parse plain text response
+        try:
+            text = data['candidates'][0]['content']['parts'][0]['text'].strip().lower()
+            if "not_food" in text or "not food" in text:
+                return "NOT_FOOD", None, 0.99, None
+            # Trả về text thô làm tên
+            clean_name = text.replace("_", " ").strip().strip('"').strip("'")
+            if clean_name:
+                return clean_name.title(), text, 0.7, None
+        except:
+            pass
+        return None, None, 0.0, f"Gemini JSON parse error: {str(e)}"
     except Exception as e:
         print(f"[DEBUG] Gemini exception: {e}")
-        return None, 0.0, f"Gemini API Exception: {str(e)}"
+        return None, None, 0.0, f"Gemini API Exception: {str(e)}"
 
 def analyze_image(image_bytes: bytes):
     """
-    Thứ tự ưu tiên (5 API):
-    1. Gemini (AI mạnh nhất, độ chính xác cao)
-    2. Spoonacular (chuyên về food)
-    3. Google Vision (general purpose, reliable)
-    4. Imagga (free tier, có food tags)
-    5. Open Food Facts (miễn phí hoàn toàn)
+    Phân tích hình ảnh và nhận diện món ăn.
+    
+    Thứ tự ưu tiên:
+    1. Gemini (AI mạnh nhất, trả về tên tiếng Việt trực tiếp)
+    2. Spoonacular (chuyên về food, trả tên tiếng Anh)
+    3. Google Vision (general purpose, trả tên tiếng Anh)
+    
+    Returns:
+        tuple: (food_name_vi, food_name_en, confidence, error_msg)
+        - food_name_vi: Tên tiếng Việt (có dấu) hoặc "NOT_FOOD"
+        - food_name_en: Tên tiếng Anh (snake_case) hoặc None
+        - confidence: Độ tin cậy 0.0 - 1.0
+        - error_msg: Thông báo lỗi hoặc None
     """
     errors = []
     
-    # 1. Thử Gemini trước (AI mạnh nhất)
+    # Khởi tạo biến để dùng trong best-result fallback
+    gemini_result = (None, None, 0.0)
+    spoonacular_result = (None, None, 0.0)
+    vision_result = (None, None, 0.0)
+    
+    # 1. Thử Gemini trước (AI mạnh nhất, trả về tên tiếng Việt trực tiếp)
     if GEMINI_API_KEY:
-        food_name_gemini, confidence_gemini, err = recognize_food_gemini(image_bytes)
-        print(f"[DEBUG] Gemini => name='{food_name_gemini}', confidence={confidence_gemini}")
-        if food_name_gemini and confidence_gemini > 0.5:  # Gemini rất chính xác
-            return food_name_gemini, confidence_gemini, None
+        food_name_vi, food_name_en, confidence_gemini, err = recognize_food_gemini(image_bytes)
+        print(f"[DEBUG] Gemini => vi='{food_name_vi}', en='{food_name_en}', confidence={confidence_gemini}")
+        
+        if food_name_vi and confidence_gemini > 0.5:
+            return food_name_vi, food_name_en, confidence_gemini, None
+        
+        if food_name_vi:
+            gemini_result = (food_name_vi, food_name_en, confidence_gemini)
+        
         if err:
             print(f"[DEBUG] Gemini error: {err}")
             errors.append(f"Gemini: {err}")
     
-    # 2. Thử Spoonacular (chuyên về đồ ăn)
+    # 2. Thử Spoonacular (chuyên về đồ ăn, trả tên tiếng Anh)
     if SPOONACULAR_API_KEY:
         food_name, confidence, err = recognize_food_spoonacular(image_bytes)
         print(f"[DEBUG] Spoonacular => name='{food_name}', confidence={confidence}")
         if food_name and confidence > 0.3:
-            return food_name, confidence, None
+            # Spoonacular trả tên tiếng Anh → dùng làm food_name_en
+            return food_name, food_name, confidence, None
+        if food_name:
+            spoonacular_result = (food_name, food_name, confidence)
         if err: 
             print(f"[DEBUG] Spoonacular error: {err}")
             errors.append(f"Spoonacular: {err}")
@@ -312,58 +381,27 @@ def analyze_image(image_bytes: bytes):
         food_name_v, confidence_v, err = recognize_food_vision(image_bytes)
         print(f"[DEBUG] Vision => name='{food_name_v}', confidence={confidence_v}")
         if food_name_v and confidence_v > 0.5:
-            return food_name_v, confidence_v, None
+            return food_name_v, food_name_v, confidence_v, None
+        if food_name_v:
+            vision_result = (food_name_v, food_name_v, confidence_v)
         if err: 
             print(f"[DEBUG] Vision error: {err}")
             errors.append(f"Vision: {err}")
-    
-    # 4. Fallback sang Imagga (có food detection)
-    food_name_img, confidence_img, err = recognize_food_imagga(image_bytes)
-    print(f"[DEBUG] Imagga => name='{food_name_img}', confidence={confidence_img}")
-    if food_name_img and confidence_img > 0.3:
-        return food_name_img, confidence_img, None
-    if err:
-        print(f"[DEBUG] Imagga error: {err}")
-        errors.append(f"Imagga: {err}")
-    
-    # 5. Fallback sang Open Food Facts
-    food_name_off, confidence_off, err = recognize_food_openfoodfacts(image_bytes)
-    print(f"[DEBUG] Open Food Facts => name='{food_name_off}', confidence={confidence_off}")
-    if food_name_off and confidence_off > 0.3:
-        return food_name_off, confidence_off, None
-    if err:
-        print(f"[DEBUG] Open Food Facts error: {err}")
-        errors.append(f"Open Food Facts: {err}")
     
     # Nếu tất cả API có kết quả nhưng confidence thấp, chọn kết quả tốt nhất
     best_result = None
     best_confidence = 0
     
-    if food_name_gemini and confidence_gemini > best_confidence:
-        best_result = (food_name_gemini, confidence_gemini)
-        best_confidence = confidence_gemini
-    
-    if food_name and confidence > best_confidence:
-        best_result = (food_name, confidence)
-        best_confidence = confidence
-    
-    if food_name_v and confidence_v > best_confidence:
-        best_result = (food_name_v, confidence_v)
-        best_confidence = confidence_v
-    
-    if food_name_img and confidence_img > best_confidence:
-        best_result = (food_name_img, confidence_img)
-        best_confidence = confidence_img
-    
-    if food_name_off and confidence_off > best_confidence:
-        best_result = (food_name_off, confidence_off)
-        best_confidence = confidence_off
+    for name_vi, name_en, conf in [gemini_result, spoonacular_result, vision_result]:
+        if name_vi and conf > best_confidence:
+            best_result = (name_vi, name_en, conf)
+            best_confidence = conf
     
     if best_result:
-        print(f"[DEBUG] Using best result despite low confidence: {best_result[0]} ({best_result[1]})")
-        return best_result[0], best_result[1], None
+        print(f"[DEBUG] Using best result despite low confidence: {best_result[0]} ({best_result[2]})")
+        return best_result[0], best_result[1], best_result[2], None
     
-    return None, 0.0, " | ".join(errors) if errors else "Không thể nhận diện món ăn"
+    return None, None, 0.0, " | ".join(errors) if errors else "Không thể nhận diện món ăn"
 
 
 def get_food_info_from_spoonacular(food_name: str):
@@ -505,7 +543,7 @@ def get_food_info_from_gemini(food_name: str):
     try:
         print(f"[INFO] Generating info for '{food_name}' from Gemini AI...")
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
         
         prompt = f"""Cung cấp thông tin chi tiết BẰNG TIẾNG VIỆT về món ăn "{food_name}" theo cấu trúc JSON sau.
 Chỉ trả về JSON hợp lệ, KHÔNG có markdown, KHÔNG giải thích thêm.
@@ -566,7 +604,8 @@ Chỉ trả về JSON hợp lệ, KHÔNG có markdown, KHÔNG giải thích thê
 
 def analyze_image_with_retry(image_bytes: bytes, skip_api: str = ""):
     """
-    Nhận diện lại với các API khác, bỏ qua API đã dùng trước đó
+    Nhận diện lại với các API khác, bỏ qua API đã dùng trước đó.
+    Returns: (food_name_vi, food_name_en, confidence, error_msg)
     """
     errors = []
     skip_api_lower = skip_api.lower()
@@ -575,9 +614,9 @@ def analyze_image_with_retry(image_bytes: bytes, skip_api: str = ""):
     
     # 1. Thử Gemini (nếu không bị skip)
     if "gemini" not in skip_api_lower and GEMINI_API_KEY:
-        food_name, confidence, err = recognize_food_gemini(image_bytes)
-        if food_name and confidence > 0.5:
-            return food_name, confidence, None
+        food_name_vi, food_name_en, confidence, err = recognize_food_gemini(image_bytes)
+        if food_name_vi and confidence > 0.5:
+            return food_name_vi, food_name_en, confidence, None
         if err:
             errors.append(f"Gemini: {err}")
     
@@ -585,7 +624,7 @@ def analyze_image_with_retry(image_bytes: bytes, skip_api: str = ""):
     if "spoonacular" not in skip_api_lower and SPOONACULAR_API_KEY:
         food_name, confidence, err = recognize_food_spoonacular(image_bytes)
         if food_name and confidence > 0.3:
-            return food_name, confidence, None
+            return food_name, food_name, confidence, None
         if err:
             errors.append(f"Spoonacular: {err}")
     
@@ -593,24 +632,9 @@ def analyze_image_with_retry(image_bytes: bytes, skip_api: str = ""):
     if "vision" not in skip_api_lower and GOOGLE_VISION_API_KEY:
         food_name, confidence, err = recognize_food_vision(image_bytes)
         if food_name and confidence > 0.5:
-            return food_name, confidence, None
+            return food_name, food_name, confidence, None
         if err:
             errors.append(f"Vision: {err}")
     
-    # 4. Thử Imagga (nếu không bị skip)
-    if "imagga" not in skip_api_lower:
-        food_name, confidence, err = recognize_food_imagga(image_bytes)
-        if food_name and confidence > 0.3:
-            return food_name, confidence, None
-        if err:
-            errors.append(f"Imagga: {err}")
-    
-    # 5. Thử Open Food Facts (nếu không bị skip)
-    if "openfoodfacts" not in skip_api_lower:
-        food_name, confidence, err = recognize_food_openfoodfacts(image_bytes)
-        if food_name and confidence > 0.3:
-            return food_name, confidence, None
-        if err:
-            errors.append(f"Open Food Facts: {err}")
-    
-    return None, 0.0, " | ".join(errors) if errors else "Tất cả API đều fail"
+    return None, None, 0.0, " | ".join(errors) if errors else "Tất cả API đều fail"
+
