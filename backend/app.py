@@ -1242,10 +1242,11 @@ def predict():
     try:
         image_bytes = file.read()
         
-        # 1. Gọi API nhận diện món ăn từ hình ảnh (tiếng Anh)
-        food_name_english, confidence, error_msg = analyze_image(image_bytes)
+        # 1. Gọi API nhận diện món ăn từ hình ảnh
+        # analyze_image trả về 4 giá trị: (food_name_vi, food_name_en, confidence, error_msg)
+        food_name_vi, food_name_en, confidence, error_msg = analyze_image(image_bytes)
     
-        if not food_name_english:
+        if not food_name_vi:
             return jsonify({
                 "success": False,
                 "message": "Không thể nhận diện hình ảnh. API đang gặp sự cố (timeout hoặc quá tải). Vui lòng thử lại sau hoặc chọn ảnh khác.",
@@ -1254,7 +1255,7 @@ def predict():
             }), 503  # Service Unavailable
         
         # Kiểm tra nếu hình ảnh KHÔNG PHẢI MÓN ĂN
-        if food_name_english == "NOT_FOOD":
+        if food_name_vi == "NOT_FOOD":
             return jsonify({
                 "success": False,
                 "is_food": False,
@@ -1262,9 +1263,26 @@ def predict():
                 "suggestion": "Vui lòng chụp hoặc tải lên hình ảnh một món ăn để hệ thống có thể nhận diện và phân tích dinh dưỡng."
             }), 400
         
-        # 2. Dịch tên món ăn sang tiếng Việt
-        food_name_vietnamese = translate_food_name(food_name_english)
-        print(f"[TRANSLATE] '{food_name_english}' → '{food_name_vietnamese}'")
+        # 2. Xử lý tên tiếng Việt
+        # Nếu Gemini đã trả tên tiếng Việt (có dấu), ưu tiên dùng
+        # Nếu API khác trả tên tiếng Anh, gọi translator để dịch
+        food_name_english = food_name_en or food_name_vi  # Lưu tên tiếng Anh để search
+        
+        # Kiểm tra xem food_name_vi đã là tiếng Việt có dấu chưa
+        import unicodedata
+        has_vietnamese_chars = any(
+            unicodedata.category(c) == 'Mn'  # Mark, Nonspacing (dấu tiếng Việt)
+            for c in unicodedata.normalize('NFD', food_name_vi)
+        )
+        
+        if has_vietnamese_chars:
+            # Gemini đã trả tên tiếng Việt có dấu → dùng trực tiếp
+            food_name_vietnamese = food_name_vi
+            print(f"[PREDICT] Dùng tên tiếng Việt từ AI: '{food_name_vietnamese}'")
+        else:
+            # Tên chưa có dấu tiếng Việt → cần dịch
+            food_name_vietnamese = translate_food_name(food_name_vi)
+            print(f"[TRANSLATE] '{food_name_vi}' → '{food_name_vietnamese}'")
         
         # 3. Tìm kiếm món ăn trong Database (thử cả tiếng Anh và tiếng Việt)
         print(f"[INFO] Tìm kiếm '{food_name_vietnamese}' trong database...")
