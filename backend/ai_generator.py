@@ -18,7 +18,7 @@ def generate_food_data_vietnamese(food_name_english: str):
         print("[Lỗi] Chưa cấu hình GEMINI_API_KEY trong file .env")
         return None
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
     
     prompt = f"""
     Hệ thống AI nhận diện hình ảnh món ăn trả về tên tiếng Anh là: "{food_name_english}".
@@ -130,7 +130,7 @@ def _translate_spoonacular_to_vietnamese(food_name_english: str, sp_data: dict):
     if not GEMINI_API_KEY:
         return None
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
     
     # Lấy thông tin cần dịch
     description = sp_data.get("description", "")
