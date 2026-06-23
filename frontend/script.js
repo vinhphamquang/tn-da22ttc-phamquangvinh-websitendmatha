@@ -1117,6 +1117,8 @@ function initAuth() {
             
             if (data.success) {
                 localStorage.setItem('smartfood_user', JSON.stringify(data.user));
+                // Reset nutrition reminder on fresh login
+                _clearNutritionReminderDismissed();
                 window.location.href = '/';
             } else {
                 errDiv.textContent = data.message;
@@ -1211,8 +1213,12 @@ function initGoogleSignIn() {
             
             if (data.success) {
                 localStorage.setItem('smartfood_user', JSON.stringify(data.user));
+                // Reset nutrition reminder on fresh login
+                _clearNutritionReminderDismissed();
                 if (modalOverlay) modalOverlay.classList.add('hidden');
                 checkLoginState();
+                // Check reminder right after Google login
+                checkNutritionPlanReminder();
             } else {
                 const errMsg = data.message || 'Lỗi đăng nhập Google';
                 if (loginErrDiv && !loginErrDiv.closest('.hidden')) {
@@ -1857,6 +1863,16 @@ function renderProfilePlans(container, plans) {
 
 
 // ---- NUTRITION PLAN REMINDER ----
+function _clearNutritionReminderDismissed() {
+    // Remove all nutrition_reminder_dismissed_* keys from sessionStorage
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('nutrition_reminder_dismissed_')) {
+            sessionStorage.removeItem(key);
+        }
+    }
+}
+
 async function checkNutritionPlanReminder() {
     const loggedUser = JSON.parse(localStorage.getItem('smartfood_user'));
     console.log('[NutritionReminder] Checking... user:', loggedUser);
@@ -1865,8 +1881,8 @@ async function checkNutritionPlanReminder() {
     // Check if dismissed today — resets automatically each new day
     const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
     const dismissedKey = `nutrition_reminder_dismissed_${today}`;
-    console.log('[NutritionReminder] today:', today, 'dismissedKey:', dismissedKey, 'dismissed:', localStorage.getItem(dismissedKey));
-    if (localStorage.getItem(dismissedKey)) return;
+    console.log('[NutritionReminder] today:', today, 'dismissedKey:', dismissedKey, 'dismissed:', sessionStorage.getItem(dismissedKey));
+    if (sessionStorage.getItem(dismissedKey)) return;
 
     try {
         const res = await fetch(`/api/meal-plans/${loggedUser.id}`);
@@ -1896,7 +1912,7 @@ function showNutritionReminder(dismissedKey) {
 
     const dismiss = () => {
         modal.classList.add('hidden');
-        localStorage.setItem(dismissedKey, '1');
+        sessionStorage.setItem(dismissedKey, '1');
     };
 
     closeBtn?.addEventListener('click', dismiss, { once: true });
