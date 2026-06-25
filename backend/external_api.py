@@ -2,7 +2,14 @@ import requests
 import base64
 import json
 import os
+import sys
+import io
 from dotenv import load_dotenv
+
+# Fix stdout encoding for Windows
+if sys.stdout and hasattr(sys.stdout, 'encoding') and sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 # Load environment variables
 load_dotenv()
@@ -28,42 +35,105 @@ FOOD_LABEL_HINTS = {
     "fruit", "dessert", "snack", "drink", "beverage",
     "soup", "salad", "sandwich", "pizza", "pasta",
     "seafood", "produce", "stew", "curry", "breakfast",
-    "lunch", "dinner", "recipe", "cooking", "kitchen",
-    "plate", "bowl", "crockery", "serveware", "fast food",
+    "lunch", "dinner", "recipe", "cooking",
+    "plate", "bowl", "fast food",
     "junk food", "comfort food", "staple food", "banh",
     "pho", "sushi", "burger", "hamburger", "taco", "burrito",
     "steak", "nachos", "fries", "fried", "baked", "grilled",
     "roasted", "steamed", "spicy", "sweet", "savory",
+    # Beverages
+    "coffee", "tea", "juice", "smoothie", "milkshake", "latte",
+    "cappuccino", "espresso", "cocktail", "wine", "beer",
+    # Desserts & Baked goods
+    "cake", "pie", "cookie", "cookies", "pudding", "ice cream",
+    "chocolate", "candy", "pastry", "donut", "muffin", "waffle",
+    "pancake", "brownie", "macaron", "croissant", "cupcake",
+    # More food items
+    "cheese", "egg", "butter", "cream", "milk", "yogurt",
+    "chicken", "beef", "pork", "lamb", "fish", "shrimp",
+    "tofu", "mushroom", "tomato", "potato", "onion",
+    "garlic", "pepper", "chili", "corn", "bean",
+    # Asian food terms
+    "dim sum", "dumpling", "wonton", "ramen", "udon",
+    "tempura", "teriyaki", "kimchi", "bibimbap",
+    "spring roll", "fried rice", "chow mein",
+    # Food-related contexts
+    "baking", "garnish", "condiment", "dipping sauce",
+}
+
+# Labels mà nếu xuất hiện ở TOP (score cao) → chắc chắn KHÔNG phải món ăn
+# Dùng để block ngay, ưu tiên hơn food hints
+NON_FOOD_LABELS = {
+    # Người
+    "person", "people", "man", "woman", "boy", "girl", "child",
+    "selfie", "portrait", "face", "human", "smile", "crowd",
+    "fashion", "clothing", "shirt", "dress", "jacket", "suit",
+    "hairstyle", "glasses", "sunglasses", "hat", "cap",
+    # Động vật
+    "dog", "cat", "bird", "animal", "pet", "puppy", "kitten",
+    "horse", "cow", "lion", "tiger", "elephant",
+    # Phương tiện
+    "car", "vehicle", "automobile", "truck", "motorcycle", "bicycle",
+    "bus", "train", "airplane", "boat", "ship",
+    # Thiết bị / đồ vật
+    "phone", "computer", "laptop", "screen", "monitor", "keyboard",
+    "television", "camera", "electronics", "gadget", "device",
+    "book", "document", "paper", "text", "screenshot",
+    "shoe", "sneaker", "bag", "handbag", "wallet",
+    # Phong cảnh / kiến trúc
+    "building", "architecture", "house", "skyscraper", "tower",
+    "landscape", "mountain", "beach", "ocean", "sky", "cloud",
+    "forest", "park", "garden", "tree", "flower",
+    "road", "street", "highway", "bridge",
+    # Khác
+    "logo", "sign", "poster", "advertisement", "banner",
+    "music", "instrument", "guitar", "piano",
+    "sport", "soccer", "football", "basketball", "tennis",
+    "game", "toy", "doll", "robot",
 }
 
 
 def is_food_image(vision_labels):
     """
-    Kiểm tra top labels từ Google Vision có chứa label liên quan đến đồ ăn không.
-
-    Args:
-        vision_labels: list of {"description": str, "score": float} từ Vision API.
-                       Có thể là None hoặc [] nếu Vision fail.
-
-    Returns:
-        bool: True nếu có label food-related trong top-5, False nếu không.
-              Khi Vision fail (None/empty) → trả True (không block — cho các API
-              khác cơ hội nhận diện).
+    Kiểm tra top labels từ Google Vision.
+    - Nếu label TOP-1/TOP-2 (score cao nhất) là NON_FOOD → return False ngay.
+    - Nếu có bất kỳ label food-related trong top-5 → return True.
+    - Mặc định: False (không tìm thấy label food).
     """
     if not vision_labels:
-        # Vision fail/timeout → không block, để Gemini quyết định
-        return True
+        return True  # Vision fail → để Gemini quyết định
 
     top = vision_labels[:5]
+    
+    # BƯỚC 1: Kiểm tra top-2 labels có phải NON_FOOD không
+    # Nếu label score cao nhất là "person", "car", "dog"... → chặn ngay
+    for lbl in top[:3]:  # Kiểm tra top-3 có confidence cao nhất
+        desc = (lbl.get("description") or "").lower().strip()
+        score = float(lbl.get("score", 0))
+        if not desc:
+            continue
+        
+        # Nếu NON_FOOD label có score >= 0.7 → chặn ngay
+        if score >= 0.7:
+            if desc in NON_FOOD_LABELS:
+                print(f"[VISION GATE] BLOCKED: top label '{desc}' (score={score:.2f}) is NON_FOOD")
+                return False
+            # Kiểm tra substring match cho non-food
+            for nf_hint in NON_FOOD_LABELS:
+                if len(nf_hint) >= 4 and nf_hint in desc:
+                    print(f"[VISION GATE] BLOCKED: label '{desc}' contains non-food '{nf_hint}' (score={score:.2f})")
+                    return False
+    
+    # BƯỚC 2: Kiểm tra có label food-related không
     for lbl in top:
         desc = (lbl.get("description") or "").lower().strip()
         if not desc:
             continue
-        # Match chính xác hoặc là substring của label
         if desc in FOOD_LABEL_HINTS:
             return True
         if any(hint in desc for hint in FOOD_LABEL_HINTS if len(hint) >= 4):
             return True
+    
     return False
 
 
@@ -315,7 +385,7 @@ def recognize_food_gemini(image_bytes: bytes):
     if not GEMINI_API_KEY:
         return None, None, 0.0, "Thiếu GEMINI_API_KEY"
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     encoded_image = base64.b64encode(image_bytes).decode('utf-8')
     
     payload = {
@@ -429,6 +499,56 @@ Nếu is_food = false, các trường food_name_vi, food_name_en để chuỗi r
         print(f"[DEBUG] Gemini exception: {e}")
         return None, None, 0.0, f"Gemini API Exception: {str(e)}"
 
+def _verify_food_with_gemini(image_bytes: bytes, suggested_name: str) -> str:
+    """
+    Sử dụng Gemini API làm trọng tài phụ khi nhận được kết quả từ Spoonacular/Vision.
+    Spoonacular luôn trả về món ăn (kể cả ảnh là người/xe). Hàm này hỏi Gemini:
+    'Trong ảnh có món ăn nào không? Có phải là [suggested_name] không?'
+    
+    Returns:
+        - "NOT_FOOD" nếu chắc chắn không phải món ăn
+        - Tên tiếng Việt nếu đúng là món ăn đó
+        - Tên món ăn khác nếu Gemini nhận diện ra món khác
+        - None nếu lỗi API
+    """
+    if not GEMINI_API_KEY:
+        return None
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+    
+    prompt = f"""Phân tích ảnh này. Một hệ thống AI khác dự đoán đây là '{suggested_name}'.
+    
+    BƯỚC 1: XÁC ĐỊNH LÀ MÓN ĂN HAY KHÔNG
+    - Nếu ảnh chụp người, động vật, phong cảnh, đồ vật, màn hình... (chủ thể chính KHÔNG phải món ăn) -> CHẮC CHẮN trả về {{"status": "NOT_FOOD", "name": ""}}
+    
+    BƯỚC 2: NẾU ĐÚNG LÀ MÓN ĂN
+    - Trả về {{"status": "FOOD", "name": "Tên tiếng Việt có dấu của món ăn trong ảnh"}}
+    - Có thể dùng tên '{suggested_name}' nếu nó đúng, hoặc sửa lại cho chính xác hơn.
+    
+    Chỉ trả về JSON, không thêm text khác.
+    """
+    
+    payload = {
+        "contents": [{"parts": [{"text": prompt}, {"inlineData": {"mimeType": "image/jpeg", "data": encoded_image}}]}],
+        "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            text = data['candidates'][0]['content']['parts'][0]['text'].strip()
+            result = json.loads(text)
+            
+            if result.get("status") == "NOT_FOOD":
+                return "NOT_FOOD"
+            return result.get("name", "").strip() or None
+    except Exception as e:
+        print(f"[DEBUG] _verify_food_with_gemini error: {e}")
+    
+    return None
+
 def analyze_image(image_bytes: bytes):
     """
     Phân tích hình ảnh và nhận diện món ăn.
@@ -494,13 +614,26 @@ def analyze_image(image_bytes: bytes):
             errors.append(f"Gemini: {err}")
 
     # 2. Spoonacular (food-specific)
+    # QUAN TRỌNG: Spoonacular KHÔNG có khả năng phát hiện non-food.
+    # Nó sẽ trả tên món ăn bất kể ảnh là gì (người, xe, con vật...).
+    # → Nếu Gemini đã fail/skip, kết quả Spoonacular CẦN được verify lại.
     if SPOONACULAR_API_KEY:
         food_name, confidence, err = recognize_food_spoonacular(image_bytes)
         print(f"[DEBUG] Spoonacular => name='{food_name}', confidence={confidence}")
         if food_name and confidence > 0.3:
-            # Spoonacular trả tên tiếng Anh → dùng làm food_name_en
-            return food_name, food_name, confidence, None
-        if food_name:
+            # VERIFY: Gọi Gemini xác nhận ảnh này có phải món ăn thật không
+            verified = _verify_food_with_gemini(image_bytes, food_name)
+            if verified == "NOT_FOOD":
+                print(f"[DEBUG] Gemini REJECTED Spoonacular result '{food_name}' → NOT_FOOD")
+                return "NOT_FOOD", None, 0.99, None
+            if verified:
+                print(f"[DEBUG] Gemini verified Spoonacular: '{food_name}' → '{verified}'")
+                return verified, food_name, confidence, None
+            # Nếu verify fail (Gemini lỗi) và Vision Gate cũng đã fail/bỏ qua từ trước
+            # CHÚNG TA KHÔNG THỂ TIN Spoonacular (vì nó luôn trả món ăn kể cả ảnh là người)
+            print(f"[DEBUG] Gemini verify lỗi, KHÔNG THỂ tin Spoonacular result '{food_name}'")
+            return None, None, 0.0, "Hệ thống AI nhận diện đang quá tải (Lỗi 429). Vui lòng thử lại sau 1 phút."
+        elif food_name:
             spoonacular_result = (food_name, food_name, confidence)
         if err:
             print(f"[DEBUG] Spoonacular error: {err}")
@@ -511,6 +644,15 @@ def analyze_image(image_bytes: bytes):
         food_name_v, confidence_v, err = recognize_food_vision(image_bytes)
         print(f"[DEBUG] Vision => name='{food_name_v}', confidence={confidence_v}")
         if food_name_v and confidence_v > 0.5:
+            # VERIFY: Vision label cũng cần verify nếu Gemini đã fail ở bước 1
+            if not GEMINI_API_KEY or gemini_result[0] is None:
+                verified = _verify_food_with_gemini(image_bytes, food_name_v)
+                if verified == "NOT_FOOD":
+                    print(f"[DEBUG] Gemini REJECTED Vision result '{food_name_v}' → NOT_FOOD")
+                    return "NOT_FOOD", None, 0.99, None
+                if verified is None:
+                    print(f"[DEBUG] Gemini verify lỗi, fall back to Vision result '{food_name_v}'")
+                    return food_name_v, food_name_v, confidence_v, None
             return food_name_v, food_name_v, confidence_v, None
         if food_name_v:
             vision_result = (food_name_v, food_name_v, confidence_v)
@@ -528,6 +670,10 @@ def analyze_image(image_bytes: bytes):
             best_confidence = conf
 
     if best_result:
+        # Nếu confidence quá thấp (< 0.2) → coi như không nhận diện được
+        if best_confidence < 0.2:
+            print(f"[DEBUG] Best result '{best_result[0]}' has too low confidence ({best_confidence}) → reject")
+            return None, None, 0.0, "Confidence quá thấp để nhận diện"
         print(f"[DEBUG] Using best result despite low confidence: {best_result[0]} ({best_result[2]})")
         return best_result[0], best_result[1], best_result[2], None
 
@@ -673,7 +819,7 @@ def get_food_info_from_gemini(food_name: str):
     try:
         print(f"[INFO] Generating info for '{food_name}' from Gemini AI...")
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
         
         prompt = f"""Cung cấp thông tin chi tiết BẰNG TIẾNG VIỆT về món ăn "{food_name}" theo cấu trúc JSON sau.
 Chỉ trả về JSON hợp lệ, KHÔNG có markdown, KHÔNG giải thích thêm.
