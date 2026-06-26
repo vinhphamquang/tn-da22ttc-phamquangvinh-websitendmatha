@@ -1,3 +1,14 @@
+---
+title: Smart Food Analysis
+emoji: 🍜
+colorFrom: red
+colorTo: yellow
+sdk: docker
+app_port: 5000
+pinned: false
+short_description: AI food recognition & nutrition analysis
+---
+
 # 🍜 Smart Food Analysis - Hệ Thống Nhận Diện Món Ăn Bằng Trí Tuệ Nhân Tạo
 
 **Smart Food Analysis** là đồ án/khóa luận xây dựng một ứng dụng Web thông minh tích hợp Trí tuệ Nhân tạo (AI) để giải quyết các bài toán về nhận diện hình ảnh món ăn, phân tích dinh dưỡng và hỗ trợ lên thực đơn ăn uống khoa học.
