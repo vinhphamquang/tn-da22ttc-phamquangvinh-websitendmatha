@@ -10,15 +10,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend source code
-COPY backend/ ./backend/
-
-# Copy frontend static files (served by Flask via static_folder="../frontend")
-COPY frontend/ ./frontend/
+# Copy the entire src directory to /app/src
+COPY src/ ./src/
 
 # Switch to backend directory so gunicorn finds app.py
-# and Flask's static_folder="../frontend" resolves to /app/frontend
-WORKDIR /app/backend
+# and Flask's static_folder="../frontend" resolves to /app/src/frontend
+WORKDIR /app/src/backend
 
 EXPOSE 5000
 

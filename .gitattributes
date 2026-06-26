@@ -49,6 +49,6 @@ saved_model/**/* filter=lfs diff=lfs merge=lfs -text
 .venv/Scripts/python.exe filter=lfs diff=lfs merge=lfs -text
 .venv/Scripts/pythonw.exe filter=lfs diff=lfs merge=lfs -text
 backend/backups/backup_20260525_190826.sql filter=lfs diff=lfs merge=lfs -text
-frontend/images/slide1.jpg filter=lfs diff=lfs merge=lfs -text
-frontend/images/slide4.jpg filter=lfs diff=lfs merge=lfs -text
-frontend/images/slide5.jpg filter=lfs diff=lfs merge=lfs -text
+src/frontend/images/slide1.jpg filter=lfs diff=lfs merge=lfs -text
+src/frontend/images/slide4.jpg filter=lfs diff=lfs merge=lfs -text
+src/frontend/images/slide5.jpg filter=lfs diff=lfs merge=lfs -text

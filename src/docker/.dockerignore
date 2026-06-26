@@ -1,0 +1,30 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Secrets — NEVER bake into image (HF injects via Space secrets)
+.env
+
+# Local database (app uses PostgreSQL via DATABASE_URL, not this file)
+backend/database.db
+*.db
+
+# Backups
+backend/backups/
+
+# Git
+.git/
+.gitignore
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Documentation not needed in image
+hf-spaces.md
