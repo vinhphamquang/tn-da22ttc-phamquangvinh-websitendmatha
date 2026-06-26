@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHealthProfile();
     loadPlanHistory();
     loadWeightHistory();
-    initNutritionNotifications(loggedUser.id);
+    // initNutritionNotifications(loggedUser.id); (Moved to notifications.js)
     initWeightModal();
 
     const form = document.getElementById('health-profile-form');
@@ -851,91 +851,9 @@ function renderPlanHistory(container, plans) {
 }
 
 // ============================================
-// NOTIFICATIONS
+// NOTIFICATIONS (Moved to notifications.js)
 // ============================================
-function initNutritionNotifications(userId) {
-    const bellWrap = document.getElementById('notif-bell-wrap');
-    const bellBtn = document.getElementById('notif-bell-btn');
-    const dropdown = document.getElementById('notif-dropdown');
-    const readAllBtn = document.getElementById('notif-read-all');
 
-    if (!bellWrap) return;
-    bellWrap.style.display = '';
-
-    bellBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('hidden');
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!bellWrap.contains(e.target)) {
-            dropdown.classList.add('hidden');
-        }
-    });
-
-    readAllBtn?.addEventListener('click', async () => {
-        try {
-            await fetch(`/api/notifications/${userId}/read-all`, { method: 'PUT' });
-            fetchNutritionNotifs();
-        } catch (e) { console.error(e); }
-    });
-
-    async function fetchNutritionNotifs() {
-        try {
-            const res = await fetch(`/api/notifications/${userId}`);
-            const data = await res.json();
-            if (!data.success) return;
-
-            const badge = document.getElementById('notif-badge');
-            const body = document.getElementById('notif-dropdown-body');
-
-            if (data.unread_count > 0) {
-                badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
-                badge.style.display = '';
-            } else {
-                badge.style.display = 'none';
-            }
-
-            if (data.notifications.length === 0) {
-                body.innerHTML = '<div class="notif-empty"><i class="fa-solid fa-bell-slash"></i><p>Chưa có thông báo</p></div>';
-                return;
-            }
-
-            body.innerHTML = data.notifications.map(n => {
-                const timeStr = n.time ? new Date(n.time).toLocaleString('vi-VN') : '';
-                const unreadClass = n.is_read ? '' : 'notif-unread';
-                return `
-                    <div class="notif-item ${unreadClass}" data-id="${n.id}" onclick="markNutritionNotifRead(${n.id})">
-                        <div class="notif-item-icon">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>
-                        <div class="notif-item-body">
-                            <p class="notif-item-text">${n.content}</p>
-                            ${n.old_name && n.new_name ? `
-                                <div class="notif-item-change">
-                                    <span class="notif-old">${n.old_name}</span>
-                                    <i class="fa-solid fa-arrow-right"></i>
-                                    <span class="notif-new">${n.new_name}</span>
-                                </div>` : ''}
-                            <span class="notif-item-time"><i class="fa-regular fa-clock"></i> ${timeStr}</span>
-                        </div>
-                    </div>`;
-            }).join('');
-        } catch (e) {
-            console.error('Notification fetch error:', e);
-        }
-    }
-
-    window.markNutritionNotifRead = async (notifId) => {
-        try {
-            await fetch(`/api/notifications/${notifId}/read`, { method: 'PUT' });
-            fetchNutritionNotifs();
-        } catch (e) { console.error(e); }
-    };
-
-    fetchNutritionNotifs();
-    setInterval(() => fetchNutritionNotifs(), 30000);
-}
 
 // ============================================
 // WEIGHT TRACKING

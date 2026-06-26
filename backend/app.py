@@ -861,7 +861,7 @@ def api_admin_update_history(history_id):
     
     # Tạo thông báo cho user nếu tên thay đổi
     if result['user_id'] and result['old_name'] != new_name:
-        content = f"Admin đã cập nhật kết quả nhận diện: '{result['old_name']}' → '{new_name}'"
+        content = f"Quản trị viên đã cập nhật kết quả nhận diện món ăn của bạn."
         create_notification(
             result['user_id'], history_id, content,
             result['old_name'], new_name
