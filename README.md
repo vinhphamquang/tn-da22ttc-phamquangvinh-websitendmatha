@@ -1,176 +1,124 @@
----
-title: Smart Food Analysis
-emoji: 🍜
-colorFrom: red
-colorTo: yellow
-sdk: docker
-app_port: 5000
-pinned: false
-short_description: AI food recognition & nutrition analysis
+# 🍜 Smart Food Analysis - Hệ Thống Nhận Diện Món Ăn Bằng Trí Tuệ Nhân Tạo
+
+**Smart Food Analysis** là đồ án/khóa luận xây dựng một ứng dụng Web thông minh tích hợp Trí tuệ Nhân tạo (AI) để giải quyết các bài toán về nhận diện hình ảnh món ăn, phân tích dinh dưỡng và hỗ trợ lên thực đơn ăn uống khoa học.
+
 ---
 
-# 🍜 Smart Food Analysis - Hệ Thống Nhận Diện Món Ăn AI
+## 🎯 1. Mục Tiêu Đồ Án
 
-Ứng dụng web nhận diện món ăn từ hình ảnh, sử dụng AI và API bên ngoài kết hợp cơ sở dữ liệu SQLite để cung cấp thông tin dinh dưỡng, công thức nấu và nguyên liệu chi tiết.
+Đề tài được phát triển với các mục tiêu cốt lõi:
+- **Nhận diện nhanh chóng:** Cho phép người dùng tải lên hoặc chụp ảnh món ăn và nhận về kết quả tên món ăn chính xác (đặc biệt hỗ trợ mạnh mẽ các món ăn Việt Nam).
+- **Phân tích dinh dưỡng:** Cung cấp thông tin chi tiết về lượng Calories, và các chỉ số Macros (Protein, Carbohydrate, Chất béo) để giúp người dùng kiểm soát chế độ ăn (giảm cân, tăng cân, giữ dáng).
+- **Hỗ trợ thực hành nấu nướng:** Đóng vai trò như một cẩm nang nấu ăn, tự động cung cấp danh sách nguyên liệu và hướng dẫn các bước thực hiện chi tiết cho món ăn vừa nhận diện.
+- **Theo dõi sức khỏe:** Tính toán chỉ số cơ thể (BMI), lưu trữ lịch sử nhận diện và đánh giá kế hoạch tiêu thụ năng lượng hàng ngày của người dùng.
 
-## ✨ Tính Năng Chính
+---
 
-- 🤖 **Nhận diện món ăn bằng AI** - Upload ảnh và nhận kết quả ngay lập tức
-- 🌐 **Hỗ trợ đa ngôn ngữ** - Tự động dịch tên món ăn sang tiếng Việt
-- 📊 **Thông tin dinh dưỡng** - Calo, Protein, Carbs, Chất béo
-- 📝 **Công thức nấu chi tiết** - Hướng dẫn từng bước với nguyên liệu cụ thể
-- 👤 **Quản lý tài khoản** - Đăng ký, đăng nhập, lịch sử tra cứu
-- 🔐 **Trang Admin** - Quản lý người dùng và món ăn
-- 🎨 **Giao diện đẹp mắt** - Light theme với accordion UI
+## 🏗️ 2. Kiến Trúc Hệ Thống
 
-## 🏗️ Kiến Trúc Hệ Thống
+Hệ thống được thiết kế theo mô hình **Client - Server (Frontend - Backend)** kết hợp tích hợp với các hệ thống AI đám mây (Cloud AI APIs).
 
-```
+### Luồng Xử Lý (Workflow):
+1. **Client (Trình duyệt):** Người dùng chụp ảnh món ăn và gửi yêu cầu (HTTP POST) lên máy chủ.
+2. **Backend (Flask Server):** Tiếp nhận hình ảnh và gửi prompt đến Google Gemini API để bóc tách thông tin. 
+3. **Xử lý Dữ liệu:** Kết quả JSON từ AI được dịch thuật, chuẩn hóa tiếng Việt và kiểm tra chéo với SQLite Database. Nếu đây là món ăn mới, hệ thống tự động lưu lại để tăng tốc độ cho các lần quét sau.
+4. **Response:** Dữ liệu hoàn chỉnh được trả về để Frontend hiển thị trên giao diện đồ họa.
+
+### Cấu Trúc Thư Mục:
+```text
 KLTN/
-├── frontend/                    # Giao diện người dùng
-│   ├── index.html              # Trang chính (SPA)
-│   ├── style.css               # Thiết kế giao diện
-│   ├── script.js               # Logic frontend
-│   └── images/                 # Hình ảnh slider
+├── frontend/                    # Giao diện người dùng (Client)
+│   ├── index.html, admin.html   # Các trang giao diện (SPA)
+│   ├── style.css, nutrition.css # File định dạng giao diện
+│   └── script.js, transitions.js# Xử lý logic Frontend
 │
-├── backend/                     # Server Flask
-│   ├── app.py                  # ⭐ Flask server chính
-│   ├── external_api.py         # API nhận diện ảnh
-│   ├── db_queries.py           # Truy vấn database
-│   ├── food_translator.py      # Dịch tên món ăn
-│   ├── unicode_utils.py        # Xử lý tiếng Việt
-│   └── ai_generator.py         # AI generator (optional)
+├── backend/                     # Máy chủ xử lý (Server)
+│   ├── app.py                   # Điểm vào chính của Flask App
+│   ├── db_queries.py            # Quản lý tương tác Cơ sở dữ liệu
+│   ├── external_api.py          # Kết nối APIs bên ngoài (Vision, Spoonacular)
+│   └── food_translator.py       # Module xử lý & chuẩn hóa tiếng Việt
 │
-├── food_recognition.db          # Database SQLite (67 món)
-├── schema.sql                   # Cấu trúc database
-├── .env                         # API keys (không commit)
-├── .env.example                 # Mẫu file .env
-├── requirements.txt             # Dependencies
-├── README.md                    # File này
-├── DOCS.md                      # Tài liệu chi tiết
-└── PROJECT_STRUCTURE.md         # Cấu trúc dự án
+├── food_recognition.db          # Cơ sở dữ liệu SQLite
+├── requirements.txt             # Danh sách thư viện Python
+└── .env                         # Các biến môi trường & API Keys bảo mật
 ```
 
-## 🚀 Cài Đặt Nhanh
+---
 
-### 1. Clone Repository
+## ⚙️ 3. Các Phần Mềm Cần Thiết Để Triển Khai
+
+Để chạy được dự án trên máy tính cục bộ (Local environment), bạn cần cài đặt các công cụ sau:
+
+1. **Python:** Phiên bản `3.10` hoặc `3.12` trở lên. ([Tải Python](https://www.python.org/downloads/))
+2. **Git:** Dùng để clone mã nguồn từ kho lưu trữ. ([Tải Git](https://git-scm.com/))
+3. **Trình duyệt Web hiện đại:** Google Chrome, Microsoft Edge, hoặc Safari.
+4. **Tài khoản cung cấp API (Bắt buộc):**
+   - **Google Gemini API Key:** Phục vụ cho AI sinh văn bản và phân tích ảnh chính.
+   - *(Tùy chọn)* Google Cloud Vision / Spoonacular API Key cho mục đích dự phòng.
+
+---
+
+## 🚀 4. Cách Thức Chạy Chương Trình
+
+Dưới đây là các bước chi tiết để khởi chạy ứng dụng từ mã nguồn:
+
+### Bước 1: Clone Repository
+Mở Terminal / Command Prompt và chạy lệnh:
 ```bash
-cd d:\KLTN
+git clone <https://github.com/vinhphamquang/Khoa_Luan_TN.git>
+cd KLTN
 ```
 
-### 2. Cài Đặt Dependencies
+### Bước 2: Thiết lập môi trường ảo (Khuyến nghị)
+Tạo và kích hoạt môi trường ảo để không ảnh hưởng đến các dự án khác:
+```bash
+# Windows
+python -m venv .venv
+.venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### Bước 3: Cài đặt các thư viện phụ thuộc
+Hệ thống sử dụng Flask và các thư viện hỗ trợ (Google Generative AI, JWT, Flask-CORS,...). Cài đặt tất cả qua lệnh:
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Cấu Hình API Keys
-Tạo file `.env` từ `.env.example`:
-```bash
-copy .env.example .env
+### Bước 4: Cấu hình biến môi trường
+Tạo một file có tên `.env` tại thư mục gốc (cùng cấp với thư mục `backend` và `frontend`), sau đó cấu hình các API keys của bạn:
+
+```env
+# Mẫu file .env
+GEMINI_API_KEY=điền_key_gemini_của_bạn_vào_đây
+GOOGLE_VISION_API_KEY=điền_key_vision_của_bạn_vào_đây
+SPOONACULAR_API_KEY=điền_key_spoonacular_của_bạn_vào_đây
+
+# JWT Secret Key (có thể gõ chuỗi ngẫu nhiên bất kỳ)
+JWT_SECRET=my_super_secret_key_123!
 ```
 
-Thêm API keys vào `.env`:
-```
-SPOONACULAR_API_KEY=your_key_here
-GOOGLE_VISION_API_KEY=your_key_here
-```
-
-### 4. Khởi Động Server
+### Bước 5: Khởi động Server Backend
+Đảm bảo bạn đang đứng ở thư mục gốc `KLTN`, chạy lệnh:
 ```bash
 python backend/app.py
 ```
+*Ghi chú: Nếu hệ thống báo lỗi thiếu Database, hãy chạy thử file `backend/init_database.py` (nếu có) hoặc đảm bảo file `food_recognition.db` đã được đặt đúng chỗ.*
 
-### 5. Truy Cập Ứng Dụng
-Mở trình duyệt: **http://localhost:5000**
+### Bước 6: Trải nghiệm Ứng dụng
+Khi Terminal báo dòng chữ `Running on http://127.0.0.1:5000`, hãy mở trình duyệt web và truy cập vào địa chỉ:
 
-## 📊 Database
-
-Database hiện có **67 món ăn** với thông tin đầy đủ:
-- Món Việt Nam: Phở, Bánh Mì, Bún Chả, Cơm Tấm...
-- Món Trung Quốc: Mì Xào, Cơm Chiên, Há Cảo...
-- Món Nhật Bản: Sushi, Ramen, Tempura...
-- Món Hàn Quốc: Kim Chi, Bibimbap...
-- Món Tây: Pizza, Burger, Pasta...
-
-Mỗi món có:
-- ✅ Mô tả chi tiết (5 dòng)
-- ✅ Hướng dẫn nấu (5 bước)
-- ✅ Nguyên liệu đầy đủ với số lượng
-- ✅ Thông tin dinh dưỡng
-- ✅ Thời gian nấu & khẩu phần
-
-## 🎯 Luồng Hoạt Động
-
-1. **Upload ảnh** → Frontend gửi đến `/predict`
-2. **Nhận diện** → Spoonacular API (fallback: Imagga, Open Food Facts)
-3. **Dịch tên** → Tiếng Anh → Tiếng Việt
-4. **Tìm kiếm** → Database với normalized search
-5. **Tự động thêm** → Nếu không có, lấy từ API và thêm vào DB
-6. **Hiển thị** → Kết quả với accordion UI
-
-## 🛠️ Công Nghệ
-
-| Thành phần | Công nghệ |
-|-----------|-----------|
-| Frontend | HTML5, CSS3, JavaScript (Vanilla) |
-| Backend | Python 3.12, Flask, Flask-CORS |
-| Database | SQLite |
-| AI/API | Spoonacular, Imagga, Open Food Facts |
-| Authentication | Session-based |
-| UI Design | Light theme, Glassmorphism, Accordion |
-
-## 📖 Tài Liệu
-
-- **README.md** (file này) - Hướng dẫn cài đặt và sử dụng
-- **DOCS.md** - Tài liệu chi tiết về API, database, features
-- **PROJECT_STRUCTURE.md** - Cấu trúc dự án chi tiết
-
-## 🔐 Tài Khoản Demo
-
-**Admin:**
-- Email: admin@smartfood.com
-- Password: admin123
-
-**User:**
-- Đăng ký tài khoản mới trên giao diện
-
-## ⚠️ Lưu Ý
-
-1. **API Keys**: Cần có API keys hợp lệ trong file `.env`
-2. **Port**: Server chạy trên port 5000
-3. **Database**: File `food_recognition.db` phải có trong thư mục gốc
-4. **Browser**: Khuyến nghị Chrome hoặc Edge (phiên bản mới)
-
-## 🐛 Troubleshooting
-
-### Server không khởi động
-```bash
-# Kiểm tra port 5000 có bị chiếm không
-netstat -ano | findstr :5000
-
-# Kill process nếu cần
-taskkill /PID <PID> /F
-```
-
-### API timeout
-- Kiểm tra kết nối internet
-- Thử upload ảnh khác
-- Sử dụng Demo Mode (nút Phở, Bánh Mì, Bún Chả)
-
-### Không nhận diện được
-- Kiểm tra API keys trong `.env`
-- Xem console log của backend
-- Thử với ảnh rõ nét hơn
-
-## 📝 License
-
-MIT License - Tự do sử dụng cho mục đích học tập và nghiên cứu.
-
-## 👥 Contributors
-
-- Sinh viên KLTN - Đại học XYZ
+👉 **[http://localhost:5000](http://localhost:5000)**
 
 ---
 
-**Phiên bản:** 2.0  
-**Cập nhật:** 15/04/2026
+## 🔐 5. Tài Khoản Quản Trị (Demo)
+
+Bạn có thể sử dụng tài khoản sau để truy cập vào trang Quản trị (Admin Dashboard) kiểm duyệt phản hồi và sửa lỗi AI:
+- **Email:** `admin@smartfood.com`
+- **Mật khẩu:** `admin123`
+
+---
+*Đồ án Khóa luận Tốt nghiệp - Cập nhật lần cuối: Tháng 06/2026.*
